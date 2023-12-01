@@ -162,17 +162,18 @@ class Worker(QRunnable):
             self.config = os.path.join(os.environ['APPDATA'], Info.APPNAME, 'ebay.yaml')
             self.platforms = os.path.join(os.environ['APPDATA'], Info.APPNAME, 'platforms.yaml')
             
-        gf = GameFinder()
-        gf.signals.notify.connect(self.handleGameFinderNotify)
-        gf.signals.data.connect(self.handleGameFinderData)
+        if os.path.exists(self.config) and os.path.exists(self.platforms):
+            gf = GameFinder()
+            gf.signals.notify.connect(self.handleGameFinderNotify)
+            gf.signals.data.connect(self.handleGameFinderData)
 
-        while self.running:
-            gf.find()
-            count = 0
-            while self.running and count < 60 * 4:
-                time.sleep(0.25)
-                count += 1
-        
+            while self.running:
+                gf.find()
+                count = 0
+                while self.running and count < 60 * 4:
+                    time.sleep(0.25)
+                    count += 1
+
         return
 
     def stop(self):
@@ -183,7 +184,7 @@ class Worker(QRunnable):
 
 class Conditions:
     def __init__(self):
-        with open("itemfilters.yaml", "r") as fd:
+        with open(os.path.join(sys._MEIPASS, 'itemfilters.yaml'), "r") as fd:
             data = yaml.load(fd, Loader=yaml.SafeLoader)
             self.conditions = data['Condition']
 
@@ -192,17 +193,27 @@ class SavedPlatforms:
         self.itemfilters = False
         self.aspectfilters = False
         self.saved = False
+
         self.load()
 
     def load(self):
-        with open("platforms.yaml", "r") as fd:
-            self.saved = yaml.load(fd, Loader=yaml.SafeLoader)
+        try:
+            with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'platforms.yaml'), "r") as fd:
+                self.saved = yaml.load(fd, Loader=yaml.SafeLoader)
+        except:
+            self.saved = {}
 
-        with open("itemfilters.yaml", "r") as fd:
-            self.itemfilters = yaml.load(fd, Loader=yaml.SafeLoader)
+        try:
+            with open(os.path.join(sys._MEIPASS, 'itemfilters.yaml'), "r") as fd:
+                self.itemfilters = yaml.load(fd, Loader=yaml.SafeLoader)
+        except:
+            self.itemfilters = {}
 
-        with open("aspectfilters.yaml", "r") as fd:
-            self.aspectfilters = yaml.load(fd, Loader=yaml.SafeLoader)
+        try:
+            with open(os.path.join(sys._MEIPASS, 'aspectfilters.yaml'), "r") as fd:
+                self.aspectfilters = yaml.load(fd, Loader=yaml.SafeLoader)
+        except:
+            self.aspectfilters = {}
 
     def reload(self):
         self.load()
@@ -265,7 +276,7 @@ class Settings:
     apiCallsPerDay = 5000
     automaticInterval = True
     automaticIntervalTime = 1
-    searchOnStartup = True
+    searchOnStartup = False
     enableAudioNotification = True
     enableDesktopNotification = True
 

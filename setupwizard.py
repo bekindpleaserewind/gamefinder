@@ -47,11 +47,11 @@ class SetupWizardPage2(QWizardPage, Ui_WizardPage2):
             self.registerField('sandbox_token*', self.lineEditToken)
             self.registered = True
         
-    def isComplete(self):
-        if os.path.exists(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'ebay.yaml')):
-            if len(self.lineEditAppid.text()) > 0 and len(self.lineEditCertid.text()) > 0 and len(self.lineEditDevid.text()) > 0 and len(self.lineEditToken.text()) > 0:
-                return True
-        return False 
+    #def isComplete(self):
+    #    if os.path.exists(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'ebay.yaml')):
+    #        if len(self.lineEditAppid.text()) > 0 and len(self.lineEditCertid.text()) > 0 and len(self.lineEditDevid.text()) > 0 and len(self.lineEditToken.text()) > 0:
+    #            return True
+    #    super(SetupWizardPage2, self).isComplete() 
 
 class SetupWizardPage3(QWizardPage, Ui_WizardPage3):
     def __init__(self):
@@ -79,11 +79,11 @@ class SetupWizardPage3(QWizardPage, Ui_WizardPage3):
         #self.setField('production_devid', self.lineEditDevid)
         #self.setField('production_token', self.lineEditToken)
 
-    def isComplete(self):
-        if os.path.exists(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'ebay.yaml')):
-            if len(self.lineEditAppid.text()) > 0 and len(self.lineEditCertid.text()) > 0 and len(self.lineEditDevid.text()) > 0 and len(self.lineEditToken.text()) > 0:
-                return True
-        return False
+    #def isComplete(self):
+    #    if os.path.exists(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'ebay.yaml')):
+    #        if len(self.lineEditAppid.text()) > 0 and len(self.lineEditCertid.text()) > 0 and len(self.lineEditDevid.text()) > 0 and len(self.lineEditToken.text()) > 0:
+    #            return True
+    #    super(SetupWizardPage3, self).isComplete() 
 
 class SetupWizard(QWizard):
     def __init__(self, parent=None, restartConnection = False):
@@ -154,7 +154,7 @@ class SetupWizard(QWizard):
             return False
 
         # Restart connection
-        if self.restartConnection:
+        if self.restartConnection and os.path.exists(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'ebay.yaml')):
             self.window.stop()
             self.window.start()
 
