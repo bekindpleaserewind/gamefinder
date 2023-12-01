@@ -317,31 +317,31 @@ class Platform:
         self.locations[id] = locations
         self.conditions[id] = conditions
         
-        config = None
-        with open("platforms.yaml", "r") as fd:
-            config = yaml.load(fd, Loader=yaml.SafeLoader)
+        config = {}
+        if os.path.exists(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'platforms.yaml')):
+            with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'platforms.yaml'), "r") as fd:
+                config = yaml.load(fd, Loader=yaml.SafeLoader)
 
-            config[id] = {
-                'categoryId': self.category[id],
-                'keywords': self.search[id],
-                'sortOrder': 'StartTimeNewest',
-                'aspectFilters': {},
-                'itemFilters': {},
-            }
+        config[id] = {
+            'categoryId': self.category[id],
+            'keywords': self.search[id],
+            'sortOrder': 'StartTimeNewest',
+            'aspectFilters': {},
+            'itemFilters': {},
+        }
 
-            if category == 139973 and self.platforms[id] is not None:
-                config[id]['aspectFilters']['Platform'] = self.platforms[id]
-            elif category == 260000 and self.models[id] is not None:
-                config[id]['aspectFilters']['Model'] = self.models[id]
+        if category == 139973 and self.platforms[id] is not None:
+            config[id]['aspectFilters']['Platform'] = self.platforms[id]
+        elif category == 260000 and self.models[id] is not None:
+            config[id]['aspectFilters']['Model'] = self.models[id]
 
-            if len(self.locations[id]) > 0:
-                config[id]['itemFilters']['LocatedIn'] = self.locations[id]
-            if len(self.conditions[id]) > 0:
-                config[id]['itemFilters']['Conditions'] = self.conditions[id]
+        if len(self.locations[id]) > 0:
+            config[id]['itemFilters']['LocatedIn'] = self.locations[id]
+        if len(self.conditions[id]) > 0:
+            config[id]['itemFilters']['Conditions'] = self.conditions[id]
         
-        if config is not None:
-            with open("platforms.yaml", "w") as fd:
-                yaml.dump(config, fd)
+        with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'platforms.yaml'), "w") as fd:
+            yaml.dump(config, fd)
 
         return(id)
 
@@ -486,45 +486,47 @@ class PlatformsDialog(QDialog, Ui_Platforms):
     def createClicked(self):
         search = self.search.text()
 
-        category = self.category.currentData()[0]
-        if not category:
-            print("No Category Selected")
-            return False
+        currentData = self.category.currentData()
+        if currentData:
+            category = currentData[0]
+            if not category:
+                print("No Category Selected")
+                return False
         
-        if category == 139973:
-            platforms = self.getPlatforms()
-            if len(platforms) == 0:
-                print("No Platforms Selected")
-                return False
-        elif category == 260000:
-            models = self.getModels()
-            if len(models) == 0:
-                print("No Models Selected")
+            if category == 139973:
+                platforms = self.getPlatforms()
+                if len(platforms) == 0:
+                    print("No Platforms Selected")
+                    return False
+            elif category == 260000:
+                models = self.getModels()
+                if len(models) == 0:
+                    print("No Models Selected")
+                    return False
+
+            locations = self.getLocations()
+            if len(locations) == 0:
+                print("No locations selected")
                 return False
 
-        locations = self.getLocations()
-        if len(locations) == 0:
-            print("No locations selected")
-            return False
+            conditions = []
+            tmpConditions = self.getConditions()
+            for condition in tmpConditions:
+                # Remove all conditions if Any condition is specified
+                if condition == -1:
+                    conditions = []
+                    break
+                else:
+                    conditions.append(condition)
 
-        conditions = []
-        tmpConditions = self.getConditions()
-        for condition in tmpConditions:
-            # Remove all conditions if Any condition is specified
-            if condition == -1:
-                conditions = []
-                break
+            result = Platform()
+            if category == 139973:
+                result.addPlatform(search, category, locations, conditions, platform = platforms)
             else:
-                conditions.append(condition)
+                result.addPlatform(search, category, locations, conditions, model = models)
 
-        result = Platform()
-        if category == 139973:
-            result.addPlatform(search, category, locations, conditions, platform = platforms)
-        else:
-            result.addPlatform(search, category, locations, conditions, model = models)
-
-        self.resetUi()
-        self.loadSaved()
+            self.resetUi()
+            self.loadSaved()
 
     def resetUi(self):
         self.platforms.clear()
@@ -553,10 +555,10 @@ class PlatformsDialog(QDialog, Ui_Platforms):
             targetType = target.data(0, Qt.UserRole)
             if targetType == TYPE_ID:
                 configId = target.text(0)
-                with open("platforms.yaml", "r") as fd:
+                with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'platforms.yaml'), "r") as fd:
                     config = yaml.load(fd, Loader=yaml.SafeLoader)
 
-                with open("platforms.yaml", "w") as fd:
+                with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'platforms.yaml'), "w") as fd:
                     del config[configId]
                     yaml.dump(config, fd)
 
@@ -570,24 +572,25 @@ class PlatformsDialog(QDialog, Ui_Platforms):
     def getTargetsFromLoadedSaves(self, root):
         targets = []
         item = root.currentItem()
-        itemType = item.data(0, Qt.UserRole)
+        if item is not None:
+            itemType = item.data(0, Qt.UserRole)
 
-        if itemType == TYPE_CATEGORY:
-            item.setSelected(False)
-        elif itemType == TYPE_ID:
-            targets.append(item)
-            for n in range(0, item.childCount()):
-                    child = item.child(n)
+            if itemType == TYPE_CATEGORY:
+                item.setSelected(False)
+            elif itemType == TYPE_ID:
+                targets.append(item)
+                for n in range(0, item.childCount()):
+                        child = item.child(n)
+                        targets.append(child)
+            elif itemType == TYPE_ITEM:
+                parent = item.parent()
+                targets.append(parent)
+
+                for n in range(0, parent.childCount()):
+                    child = parent.child(n)
                     targets.append(child)
-        elif itemType == TYPE_ITEM:
-            parent = item.parent()
-            targets.append(parent)
-
-            for n in range(0, parent.childCount()):
-                child = parent.child(n)
-                targets.append(child)
-        else:
-            print("Invalid Item Type")
+            else:
+                print("Invalid Item Type")
 
         return targets
 
@@ -703,27 +706,28 @@ class PlatformsDialog(QDialog, Ui_Platforms):
     def loadCategory(self, loadUi = True):
         self.categoryToAspectFilters = {}
 
-        # Load configuration id
-        with open('platforms.yaml', 'r') as fd:
-            configData = yaml.safe_load(fd)
-            for configId in configData:
-                self.categoryToAspectFilters[configId]  = {
-                    'aspectFilters': configData[configId]['aspectFilters'],
-                }
-        # Load aspectFilter category names and ids
-        with open('aspectfilters.yaml', 'r') as fd:
-            aspectFilterData = yaml.safe_load(fd)
+        if os.path.exists(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'platforms.yaml')):
+            # Load configuration id
+            with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'platforms.yaml'), 'r') as fd:
+                configData = yaml.safe_load(fd)
+                for configId in configData:
+                    self.categoryToAspectFilters[configId]  = {
+                        'aspectFilters': configData[configId]['aspectFilters'],
+                    }
+            # Load aspectFilter category names and ids
+            with open(os.path.join(sys._MEIPASS, 'aspectfilters.yaml'), 'r') as fd:
+                aspectFilterData = yaml.safe_load(fd)
 
-            # Get each configuration id
-            for configId in self.categoryToAspectFilters.keys():
-                # Get our aspectFilters types we use for each configuration
-                for configDataType in self.categoryToAspectFilters[configId]['aspectFilters'].keys():
-                    # Loop over all available aspectFilters and check against aspectFilterDataType
-                    for aspectFilterId in aspectFilterData.keys():
-                        for aspectFilterType in aspectFilterData[aspectFilterId]['aspectFilters'].keys():
-                            if configDataType == aspectFilterType:
-                                # Save the category name
-                                self.categoryToAspectFilters[configId]['categoryIds'] = {aspectFilterId: aspectFilterData[aspectFilterId]['name']}
+                # Get each configuration id
+                for configId in self.categoryToAspectFilters.keys():
+                    # Get our aspectFilters types we use for each configuration
+                    for configDataType in self.categoryToAspectFilters[configId]['aspectFilters'].keys():
+                        # Loop over all available aspectFilters and check against aspectFilterDataType
+                        for aspectFilterId in aspectFilterData.keys():
+                            for aspectFilterType in aspectFilterData[aspectFilterId]['aspectFilters'].keys():
+                                if configDataType == aspectFilterType:
+                                    # Save the category name
+                                    self.categoryToAspectFilters[configId]['categoryIds'] = {aspectFilterId: aspectFilterData[aspectFilterId]['name']}
 
         # Add categories to UI
         if loadUi:
@@ -735,7 +739,7 @@ class PlatformsDialog(QDialog, Ui_Platforms):
                 self.category.addItem(category, userData = categories[category])
 
             # Load any missing categories:
-            with open('aspectfilters.yaml', 'r') as fd:
+            with open(os.path.join(sys._MEIPASS, 'aspectfilters.yaml'), 'r') as fd:
                 aspectFilterData = yaml.safe_load(fd)
                 for categoryId in aspectFilterData.keys():
                     name = aspectFilterData[categoryId]['name']
@@ -1152,13 +1156,13 @@ if __name__ == "__main__":
     app.setQuitOnLastWindowClosed(False)
 
     if Info.FROZEN:
-        window = MainWindow()
-
         appData = os.path.join(os.environ['APPDATA'], Info.APPNAME)
         ebayYaml = os.path.join(appData, 'ebay.yaml')
 
         if not os.path.exists(appData):
              os.mkdir(appData)
+
+        window = MainWindow()
 
         if not os.path.exists(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'ebay.yaml')):
             window.show()
