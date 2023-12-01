@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>WizardPage1</class>
+ <widget class="QWizardPage" name="WizardPage1">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>860</width>
+    <height>524</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>WizardPage</string>
+  </property>
+  <property name="title">
+   <string>Ebay Game Monitor</string>
+  </property>
+  <property name="subTitle">
+   <string/>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Welcome to the configuration wizard for Ebay Game Monitor!
+
+
+This wizard will guide you through the process of configuring your development credentials for both the sandbox and production APIs.  Once complete, your application will have full access to monitor different game categories on ebay for anything you'd like to search for.   Remember to make sure you've setup your developer account at &lt;a href=&quot;https://developer.ebay.com&quot;&gt;https://developer.ebay.com&lt;/a&gt; and registered a new application before continuing!</string>
+     </property>
+     <property name="textFormat">
+      <enum>Qt::MarkdownText</enum>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
