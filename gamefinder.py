@@ -969,7 +969,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.settings.load()
 
         # Set our window icon
-        self.setWindowIcon(QIcon(os.path.join(sys._MEIPASS, 'ebay.png')))
+        self.setWindowIcon(QIcon(os.path.join(sys._MEIPASS, 'gamefinder_logo_whitebackground_small.png')))
 
         # Create a new gamefinder application and configure signals
         self.gamefinder = App(app)
@@ -987,7 +987,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.actionAbout.triggered.connect(self.about)
 
         # System tray
-        self.trayIcon = QIcon(os.path.join(sys._MEIPASS, 'ebay.png'))
+        self.trayIcon = QIcon(os.path.join(sys._MEIPASS, 'gamefinder_logo_whitebackground.png'))
         self.tray = SystemTrayIcon(self.trayIcon, self.gamefinder, self)
 
         # Setup toolbar
@@ -997,7 +997,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.button_start = QAction(QIcon(os.path.join(sys._MEIPASS, 'start.png')), "Start", self)
         self.button_start.setStatusTip("Start Searching")
         self.button_start.triggered.connect(self.start)
-        self.button_start.setDisabled(False)
+        if os.path.exists(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'ebay.yaml')):
+            self.button_start.setDisabled(False)
+        else:
+            self.button_start.setDisabled(True)
         self.toolBar.addAction(self.button_start)
         # Toolbar stop button
         self.button_stop = QAction(QIcon(os.path.join(sys._MEIPASS, 'stop.png')), "Stop", self)
