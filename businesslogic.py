@@ -100,7 +100,8 @@ class GameFinder(FindingConnection, QObject):
                 items = []
                 datas = []
 
-                for item in j['searchResult']['item']:
+                # Loop over list in reverse order since the output is a FIFO and we want the newest entry on top
+                for item in reversed(j['searchResult']['item']):
                     current_auction_stamp = item['listingInfo']['startTime']
                     current_timestamp = time.mktime(time.strptime(current_auction_stamp, "%Y-%m-%dT%H:%M:%S.%fZ"))
 
@@ -119,12 +120,8 @@ class GameFinder(FindingConnection, QObject):
                 itemCount = len(items)
                 # Audio Notification
                 if self.settings.enableAudioNotification and itemCount > 0:
-                    if j['searchResult']['item'][0]['listingInfo']['buyItNowAvailable'] != 'false':
-                        song = os.path.join(sys._MEIPASS, 'alerts', "lots.mp3")
-                        mixer.music.load(song)
-                    else:
-                        song = os.path.join(sys._MEIPASS, 'alerts', "games.mp3")
-                        mixer.music.load(song)
+                    song = os.path.join(sys._MEIPASS, 'alerts', "games.mp3")
+                    mixer.music.load(song)
 
                     if not mixer.get_busy():
                         mixer.music.play()
@@ -134,7 +131,6 @@ class GameFinder(FindingConnection, QObject):
                     notification = "Found {} items".format(itemCount)
                     for i in items[0:2]:
                         notification += "\n{}".format(i)
-
                     self.signals.notify.emit((Info.APPNAME, notification))
 
                 self.signals.data.emit(datas)
