@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import pprint
 import os
 import re
 import sys
@@ -913,21 +912,18 @@ class SettingsDialog(QDialog, Ui_Settings):
     
     def checkSearchOnStartupButton(self, button):
         if button.text() == "On" and button.isChecked():
-            print("Button pressed is {} and checked is {}".format(button.text(), button.isChecked()))
             self.settings.searchOnStartup = True
         else:
             self.settings.searchOnStartup = False
 
     def checkEnableAudioNotificationButton(self, button):
         if button.text() == "On" and button.isChecked():
-            print("Button pressed is {} and checked is {}".format(button.text(), button.isChecked()))
             self.settings.enableAudioNotification = True
         else:
             self.settings.enableAudioNotification = False
 
     def checkEnableDesktopNotificationButton(self, button):
         if button.text() == "On" and button.isChecked():
-            print("Button pressed is {} and checked is {}".format(button.text(), button.isChecked()))
             self.settings.enableDesktopNotification = True
         else:
             self.settings.enableDesktopNotification = False
@@ -1173,13 +1169,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 for row in data['state']:
                     self.tableWidget.addData([row['values']], row['activated'])
         except Exception as e:
-            print("Exception in loading table save state")
-            print(e)
+            pass
 
     def saveTableState(self):
         data = {'state': []}
         rowCount = self.tableWidget.rowCount()
-        print("Backup {} rows".format(rowCount))
 
         for index in reversed(range(0, rowCount)):
             itemId = self.tableWidget.item(index, 0)
@@ -1209,7 +1203,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                         match.group(1),
                     ],
                 })
-            
+
         with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'state.yaml'), "w") as fd:
             yaml.dump(data, fd)
 
