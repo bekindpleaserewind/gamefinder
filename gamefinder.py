@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import pprint
 import os
+import re
 import sys
 import signal
 import yaml
@@ -70,10 +71,24 @@ class SystemTrayIcon(QSystemTrayIcon):
         self.window = window
         self.setIcon(icon)
         self.setVisible(True)
+
         self.menu = QMenu()
+
+        # Start
+        self.start = QAction("Start")
+        self.menu.addAction(self.start)
+        self.start.triggered.connect(window.start)
+        # Stop
+        self.stop = QAction("Stop")
+        self.menu.addAction(self.stop)
+        self.start.triggered.connect(window.stop)
+        # Separator
+        self.menu.addSeparator()
+        # Quit
         self.quit = QAction("Quit")
         self.menu.addAction(self.quit)
         self.quit.triggered.connect(window.shutdown)
+
         self.setContextMenu(self.menu)
 
         self.activated.connect(self.swapWindow)
@@ -152,6 +167,9 @@ class LinkWidget(QWidget):
         self._lastpos = None
 
         self.link.linkActivated.connect(self.handleLinkActivated)
+    
+    def text(self):
+        return self.link.text()
 
     def handleLinkActivated(self, link):
         # Scan table for this object (self)
@@ -201,7 +219,7 @@ class TableWidget(QTableWidget):
     def __init__(self, parent = None):
         super(TableWidget, self).__init__(parent)
         self._data = []
-
+        self.parent = parent
         self._headers = ['ID', 'Title', 'Price', 'Currency', 'Best Offer', 'Buy it Now', 'Location']
         self.setColumnCount(len(self._headers))
         self.setHorizontalHeaderLabels(self._headers)
@@ -252,12 +270,12 @@ class TableWidget(QTableWidget):
         link = self.item(row, 6)
         return((itemId, title, price, currency, bestOffer, buyItNow, link))
 
-    def addData(self, data = []):
+    def addData(self, data = [], noColor = False):
         self._data = data + self._data
 
         for i in range(0, len(data)):
             self.insertRow(0)
-            row = self.generateRow(data[i])
+            row = self.generateRow(data[i], noColor)
             self.setItem(0, 0, row[0])
             self.setItem(0, 1, row[1])
             self.setItem(0, 2, row[2])
@@ -271,8 +289,11 @@ class TableWidget(QTableWidget):
         color = QColor.fromRgb(rgb[0], rgb[1], rgb[2])
         return(color)
 
-    def generateRow(self, row):
-        color = self.getColorFromHex("ebcb17")
+    def generateRow(self, row, noColor = False):
+        if noColor:
+            color = self.getColorFromHex("ffffff")
+        else:
+            color = self.getColorFromHex("92d050")
         itemId = QTableWidgetItem(row[0])
         itemId.setBackground(color)
         title = QTableWidgetItem(row[1])
@@ -285,7 +306,11 @@ class TableWidget(QTableWidget):
         bestOffer.setBackground(color)
         buyItNow = QTableWidgetItem(row[5])
         buyItNow.setBackground(color)
-        link = LinkWidget(row[6], "#ebcb17", [itemId, title, price, currency, bestOffer, buyItNow], self)
+
+        if noColor:
+            link = LinkWidget(row[6], "#ffffff", [itemId, title, price, currency, bestOffer, buyItNow], self)
+        else:
+            link = LinkWidget(row[6], "#92d050", [itemId, title, price, currency, bestOffer, buyItNow], self)
 
         return((itemId, title, price, currency, bestOffer, buyItNow, link))
 
@@ -299,7 +324,6 @@ class WidgetSaved(QWidget, Ui_widgetsaved):
         self.setupUi(self)
         self.body.setColumnCount(1)
     
-
 class Platform:
     search = {}
     category = {}
@@ -1056,7 +1080,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.updateIconStatusBar(OFFLINE)
 
         # Table Data
-        self.tableWidget = TableWidget()
+        self.tableWidget = TableWidget(self)
+        self.loadTableState()
         self.main.addWidget(self.tableWidget)
 
         # Check if search on startup is enabled
@@ -1136,8 +1161,57 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def shutdown(self, *args, **kwargs):
         self.running = False
         self.stop()
+        self.saveTableState()
         app.quit()
         self.reap()
+
+    def loadTableState(self):
+        # Load existing saved state on a best try effort
+        try:
+            with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'state.yaml'), "r") as fd:
+                data = yaml.load(fd, Loader=yaml.SafeLoader)
+                for row in data['state']:
+                    self.tableWidget.addData([row['values']], row['activated'])
+        except Exception as e:
+            print("Exception in loading table save state")
+            print(e)
+
+    def saveTableState(self):
+        data = {'state': []}
+        rowCount = self.tableWidget.rowCount()
+        print("Backup {} rows".format(rowCount))
+
+        for index in reversed(range(0, rowCount)):
+            itemId = self.tableWidget.item(index, 0)
+            title = self.tableWidget.item(index, 1)
+            price = self.tableWidget.item(index, 2)
+            currency = self.tableWidget.item(index, 3)
+            bestOffer = self.tableWidget.item(index, 4)
+            buyItNow = self.tableWidget.item(index, 5)
+            location = self.tableWidget.cellWidget(index, 6)
+            activated = False
+
+            if str(itemId.background().color().name()).upper() == "#FFFFFF":
+                activated = True
+
+            # extract url
+            match = re.match(r'<a href="(.*?)">.*?', location.text())
+            if match:
+                data['state'].append({
+                    'activated': activated,
+                    'values': [
+                        itemId.text(),
+                        title.text(),
+                        price.text(),
+                        currency.text(),
+                        bestOffer.text(),
+                        buyItNow.text(),
+                        match.group(1),
+                    ],
+                })
+            
+        with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'state.yaml'), "w") as fd:
+            yaml.dump(data, fd)
 
     def isRunning(self):
         return self.running
