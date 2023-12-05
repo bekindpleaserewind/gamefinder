@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import pprint
 import os
 import re
 import sys
@@ -81,7 +80,7 @@ class SystemTrayIcon(QSystemTrayIcon):
         # Stop
         self.stop = QAction("Stop")
         self.menu.addAction(self.stop)
-        self.start.triggered.connect(window.stop)
+        self.stop.triggered.connect(window.stop)
         # Separator
         self.menu.addSeparator()
         # Quit
@@ -913,27 +912,25 @@ class SettingsDialog(QDialog, Ui_Settings):
     
     def checkSearchOnStartupButton(self, button):
         if button.text() == "On" and button.isChecked():
-            print("Button pressed is {} and checked is {}".format(button.text(), button.isChecked()))
             self.settings.searchOnStartup = True
         else:
             self.settings.searchOnStartup = False
 
     def checkEnableAudioNotificationButton(self, button):
         if button.text() == "On" and button.isChecked():
-            print("Button pressed is {} and checked is {}".format(button.text(), button.isChecked()))
             self.settings.enableAudioNotification = True
         else:
             self.settings.enableAudioNotification = False
 
     def checkEnableDesktopNotificationButton(self, button):
         if button.text() == "On" and button.isChecked():
-            print("Button pressed is {} and checked is {}".format(button.text(), button.isChecked()))
             self.settings.enableDesktopNotification = True
         else:
             self.settings.enableDesktopNotification = False
 
     def load(self):
         self.settings = Settings()
+        self.settings.signals.reload.connect(self.settings.load)
         self.settings.load()
 
         self.apiCallsPerDay.setText(str(self.settings.apiCallsPerDay))
@@ -990,6 +987,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.running = False
 
         self.settings = Settings()
+        self.settings.signals.reload.connect(self.settings.load)
         self.settings.load()
 
         # Set our window icon
@@ -1151,16 +1149,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.tableWidget.scrollToItem(item)
 
     def start(self, *args, **kwargs):
-        if self.button_start.isEnabled():
-            self.button_start.setDisabled(True)
-            self.button_stop.setDisabled(False)
-        self.running = True
-        self.updateIconStatusBar(ONLINE)
-        self.gamefinder.run()
+        if not self.running:
+            self.running = True
+            if self.button_start.isEnabled():
+                self.button_start.setDisabled(True)
+                self.button_stop.setDisabled(False)
+            self.updateIconStatusBar(ONLINE)
+            self.gamefinder.run()
 
     def shutdown(self, *args, **kwargs):
-        self.running = False
-        self.stop()
+        if self.running:
+            self.running = False
+            self.stop()
+
         self.saveTableState()
         app.quit()
         self.reap()
@@ -1173,13 +1174,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 for row in data['state']:
                     self.tableWidget.addData([row['values']], row['activated'])
         except Exception as e:
-            print("Exception in loading table save state")
-            print(e)
+            pass
 
     def saveTableState(self):
         data = {'state': []}
         rowCount = self.tableWidget.rowCount()
-        print("Backup {} rows".format(rowCount))
 
         for index in reversed(range(0, rowCount)):
             itemId = self.tableWidget.item(index, 0)
@@ -1209,7 +1208,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                         match.group(1),
                     ],
                 })
-            
+
         with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'state.yaml'), "w") as fd:
             yaml.dump(data, fd)
 
@@ -1222,6 +1221,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.button_start.setDisabled(False)
         self.updateIconStatusBar(OFFLINE)
         self.gamefinder.stop()
+        self.running = False
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, handler)

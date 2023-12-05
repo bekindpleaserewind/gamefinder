@@ -9,18 +9,18 @@ from pygame import mixer
 from PySide6.QtCore import QObject, Slot, QRunnable
 
 from appinfo import Info
-from signals import GameFinderSignals, WorkerSignals
+from signals import GameFinderSignals, WorkerSignals, SettingsSignals
 
 sys.path.insert(0, '%s' % os.path.dirname(__file__))
 from ebaysdk.finding import Connection as FindingConnection
 from ebaysdk.exception import ConnectionError
-
 
 class GameFinder(FindingConnection, QObject):
     def __init__(self):
         self.signals = GameFinderSignals()
 
         self.settings = Settings()
+        self.settings.signals.reload.connect(self.settings.load)
         self.settings.load()
 
         self.config = os.path.join(os.environ['APPDATA'], Info.APPNAME, 'ebay.yaml')
@@ -144,6 +144,9 @@ class Worker(QRunnable):
         super(Worker, self).__init__()
         self.running = False
         self.signals = WorkerSignals()
+        self.settings = Settings()
+        self.settings.signals.reload.connect(self.settings.load)
+        self.settings.load()
 
     def handleGameFinderNotify(self, t):
         self.signals.notify.emit(t)
@@ -166,10 +169,30 @@ class Worker(QRunnable):
             while self.running:
                 gf.find()
                 count = 0
-                while self.running and count < 60 * 4:
+
+                interval = int(self.settings.automaticIntervalTime)
+
+                if self.settings.automaticInterval:
+                    # Calculate interval in 60 second blocks
+                    # and auto determine how often we should 
+                    # sleep before another run.
+                    with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'platforms.yaml'), "r") as fd:
+                        platforms = yaml.load(fd, Loader=yaml.SafeLoader)
+                        platformCount = len(platforms.keys())
+                    
+                    maxApiCallsPerPlatform = int(self.settings.apiCallsPerDay) / int(platformCount)
+
+                    interval = 0
+                    seconds = 60
+                    maxSecondsPerPlatforms = 0
+
+                    while maxSecondsPerPlatforms < 86400:
+                        interval += 1
+                        maxSecondsPerPlatforms = maxApiCallsPerPlatform * seconds * interval
+
+                while self.running and count < 60 * interval * 4:
                     time.sleep(0.25)
                     count += 1
-
         return
 
     def stop(self):
@@ -276,6 +299,8 @@ class Settings:
     enableAudioNotification = True
     enableDesktopNotification = True
 
+    signals = SettingsSignals()
+
     def __init__(self):
         # create settings.yaml with defaults if it does not exist
         if not os.path.exists(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'settings.yaml')):
@@ -315,3 +340,5 @@ class Settings:
 
         with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'settings.yaml'), "w") as fd:
             yaml.dump(save, fd)
+
+        self.signals.reload.emit(True)
