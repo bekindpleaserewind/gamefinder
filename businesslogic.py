@@ -11,7 +11,6 @@ from PySide6.QtCore import QObject, Slot, QRunnable
 from appinfo import Info
 from signals import GameFinderSignals, WorkerSignals, SettingsSignals
 
-sys.path.insert(0, '%s' % os.path.dirname(__file__))
 from ebaysdk.finding import Connection as FindingConnection
 from ebaysdk.exception import ConnectionError
 

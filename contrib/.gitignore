@@ -1,6 +1,0 @@
-# Ignore everything
-*
-
-# Excluding these
-!.gitignore
-!README
