@@ -80,7 +80,7 @@ class SystemTrayIcon(QSystemTrayIcon):
         # Stop
         self.stop = QAction("Stop")
         self.menu.addAction(self.stop)
-        self.start.triggered.connect(window.stop)
+        self.stop.triggered.connect(window.stop)
         # Separator
         self.menu.addSeparator()
         # Quit
@@ -930,6 +930,7 @@ class SettingsDialog(QDialog, Ui_Settings):
 
     def load(self):
         self.settings = Settings()
+        self.settings.signals.reload.connect(self.settings.load)
         self.settings.load()
 
         self.apiCallsPerDay.setText(str(self.settings.apiCallsPerDay))
@@ -986,6 +987,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.running = False
 
         self.settings = Settings()
+        self.settings.signals.reload.connect(self.settings.load)
         self.settings.load()
 
         # Set our window icon
@@ -1147,16 +1149,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.tableWidget.scrollToItem(item)
 
     def start(self, *args, **kwargs):
-        if self.button_start.isEnabled():
-            self.button_start.setDisabled(True)
-            self.button_stop.setDisabled(False)
-        self.running = True
-        self.updateIconStatusBar(ONLINE)
-        self.gamefinder.run()
+        if not self.running:
+            self.running = True
+            if self.button_start.isEnabled():
+                self.button_start.setDisabled(True)
+                self.button_stop.setDisabled(False)
+            self.updateIconStatusBar(ONLINE)
+            self.gamefinder.run()
 
     def shutdown(self, *args, **kwargs):
-        self.running = False
-        self.stop()
+        if self.running:
+            self.running = False
+            self.stop()
+
         self.saveTableState()
         app.quit()
         self.reap()
@@ -1216,6 +1221,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.button_start.setDisabled(False)
         self.updateIconStatusBar(OFFLINE)
         self.gamefinder.stop()
+        self.running = False
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, handler)

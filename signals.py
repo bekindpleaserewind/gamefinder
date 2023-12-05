@@ -11,3 +11,6 @@ class WorkerSignals(QObject):
 class GameFinderSignals(QObject):
     notify = Signal(tuple)
     data = Signal(list)
+
+class SettingsSignals(QObject):
+    reload = Signal(bool)
