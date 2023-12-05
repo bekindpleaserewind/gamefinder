@@ -46,7 +46,7 @@ class GameFinder(FindingConnection, QObject):
                     'itemFilter': [],
                 }
 
-                platform_yaml = os.path.join(os.environ['APPDATA'], Info.APPNAME, "%s.txt" % (platform,))
+                platform_yaml = os.path.join(self.pathinfo.app, "%s.txt" % (platform,))
 
                 check = platform_config[platform].get('categoryId')
                 if check != None:
