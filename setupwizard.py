@@ -4,6 +4,7 @@ import yaml
 from PySide6.QtWidgets import QWizard, QWizardPage
 
 from appinfo import Info
+from path import Pathinfo
 from wizardpage1 import Ui_WizardPage1
 from wizardpage2 import Ui_WizardPage2
 
@@ -17,6 +18,7 @@ class SetupWizardPage1(QWizardPage, Ui_WizardPage1):
     def __init__(self):
         super(SetupWizardPage1, self).__init__()
         self.setupUi(self)
+        self.pathinfo = Pathinfo()
 
 class SetupWizardPage2(QWizardPage, Ui_WizardPage2):
     def __init__(self):
@@ -28,8 +30,8 @@ class SetupWizardPage2(QWizardPage, Ui_WizardPage2):
         self.registerField('production_token*', self.lineEditToken)
 
     def initializePage(self):
-        if os.path.exists(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'ebay.yaml')):
-            with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'ebay.yaml'), "r") as fd:
+        if os.path.exists(self.pathinfo.ebay):
+            with open(self.pathinfo.ebay, "r") as fd:
                 config = yaml.load(fd, Loader=yaml.SafeLoader)
                 self.lineEditAppid.setText(config['api.ebay.com']['appid'])
                 self.lineEditCertid.setText(config['api.ebay.com']['certid'])
@@ -48,6 +50,8 @@ class SetupWizard(QWizard):
         self.stopConnection = stopConnection
         super(SetupWizard, self).__init__(parent)
 
+        self.pathinfo = Pathinfo()
+
         self.dataPage2 = SetupWizardPage2Data()
 
         page1 = SetupWizardPage1()
@@ -64,7 +68,7 @@ class SetupWizard(QWizard):
 
         if self.generateEbayYaml():
             if self.window is not None:
-                if os.path.exists(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'ebay.yaml')):
+                if os.path.exists(self.pathinfo.ebay):
                     self.window.button_start.setDisabled(False)
                 else:
                     self.window.button_start.setDisabled(True)
@@ -74,7 +78,7 @@ class SetupWizard(QWizard):
 
                 return True
 
-        if os.path.exists(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'ebay.yaml')):
+        if os.path.exists(self.pathinfo.ebay):
             self.window.button_start.setDisabled(False)
         else:
             self.window.button_start.setDisabled(True)
@@ -107,10 +111,10 @@ class SetupWizard(QWizard):
         }
 
         # stop connection
-        if self.stopConnection and os.path.exists(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'ebay.yaml')):
+        if self.stopConnection and os.path.exists(self.pathinfo.ebay):
             self.window.stop()
 
-        ebayYamlPath = os.path.join(os.environ['APPDATA'], Info.APPNAME, 'ebay.yaml')
+        ebayYamlPath = self.pathinfo.ebay
         try:
             with open(ebayYamlPath, 'w') as fd:
                 yaml.dump(ebayYaml, fd)

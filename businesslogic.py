@@ -8,6 +8,7 @@ import babel.numbers
 from pygame import mixer
 from PySide6.QtCore import QObject, Slot, QRunnable
 
+from path import Pathinfo
 from appinfo import Info
 from signals import GameFinderSignals, WorkerSignals, SettingsSignals
 
@@ -18,22 +19,21 @@ class GameFinder(FindingConnection, QObject):
     def __init__(self):
         self.signals = GameFinderSignals()
 
+        self.pathinfo = Pathinfo()
+
         self.settings = Settings()
         self.settings.signals.reload.connect(self.settings.load)
         self.settings.load()
 
-        self.config = os.path.join(os.environ['APPDATA'], Info.APPNAME, 'ebay.yaml')
-        self.platforms = os.path.join(os.environ['APPDATA'], Info.APPNAME, 'platforms.yaml')
-
         # Initialize pygame audio mixer
         mixer.init()
 
-        super(GameFinder, self).__init__(config_file = self.config)
+        super(GameFinder, self).__init__(config_file = self.pathinfo.ebay)
 
     def find(self):
         self.running = True
 
-        with open(self.platforms, "r") as fd:
+        with open(self.pathinfo.platforms, "r") as fd:
             platform_config = yaml.load(fd, Loader=yaml.SafeLoader)
 
         try:
@@ -119,8 +119,7 @@ class GameFinder(FindingConnection, QObject):
                 itemCount = len(items)
                 # Audio Notification
                 if self.settings.enableAudioNotification and itemCount > 0:
-                    song = os.path.join(sys._MEIPASS, 'alerts', "games.mp3")
-                    mixer.music.load(song)
+                    mixer.music.load(self.pathinfo.music.games)
 
                     if not mixer.get_busy():
                         mixer.music.play()
@@ -143,6 +142,7 @@ class Worker(QRunnable):
         super(Worker, self).__init__()
         self.running = False
         self.signals = WorkerSignals()
+        self.pathinfo = Pathinfo()
         self.settings = Settings()
         self.settings.signals.reload.connect(self.settings.load)
         self.settings.load()
@@ -156,11 +156,7 @@ class Worker(QRunnable):
     @Slot()
     def run(self):
         self.running = True
-        if Info.FROZEN:
-            self.config = os.path.join(os.environ['APPDATA'], Info.APPNAME, 'ebay.yaml')
-            self.platforms = os.path.join(os.environ['APPDATA'], Info.APPNAME, 'platforms.yaml')
-            
-        if os.path.exists(self.config) and os.path.exists(self.platforms):
+        if os.path.exists(self.pathinfo.ebay) and os.path.exists(self.pathinfo.platforms):
             gf = GameFinder()
             gf.signals.notify.connect(self.handleGameFinderNotify)
             gf.signals.data.connect(self.handleGameFinderData)
@@ -175,7 +171,7 @@ class Worker(QRunnable):
                     # Calculate interval in 60 second blocks
                     # and auto determine how often we should 
                     # sleep before another run.
-                    with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'platforms.yaml'), "r") as fd:
+                    with open(self.pathinfo.platforms, "r") as fd:
                         platforms = yaml.load(fd, Loader=yaml.SafeLoader)
                         platformCount = len(platforms.keys())
                     
@@ -202,7 +198,8 @@ class Worker(QRunnable):
 
 class Conditions:
     def __init__(self):
-        with open(os.path.join(sys._MEIPASS, 'itemfilters.yaml'), "r") as fd:
+        self.pathinfo = Pathinfo()
+        with open(self.pathinfo.itemfilters, "r") as fd:
             data = yaml.load(fd, Loader=yaml.SafeLoader)
             self.conditions = data['Condition']
 
@@ -211,24 +208,24 @@ class SavedPlatforms:
         self.itemfilters = False
         self.aspectfilters = False
         self.saved = False
-
+        self.pathinfo = Pathinfo()
         self.load()
 
     def load(self):
         try:
-            with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'platforms.yaml'), "r") as fd:
+            with open(self.pathinfo.platforms, "r") as fd:
                 self.saved = yaml.load(fd, Loader=yaml.SafeLoader)
         except:
             self.saved = {}
 
         try:
-            with open(os.path.join(sys._MEIPASS, 'itemfilters.yaml'), "r") as fd:
+            with open(self.pathinfo.itemfilters, "r") as fd:
                 self.itemfilters = yaml.load(fd, Loader=yaml.SafeLoader)
         except:
             self.itemfilters = {}
 
         try:
-            with open(os.path.join(sys._MEIPASS, 'aspectfilters.yaml'), "r") as fd:
+            with open(self.pathinfo.aspectfilters, "r") as fd:
                 self.aspectfilters = yaml.load(fd, Loader=yaml.SafeLoader)
         except:
             self.aspectfilters = {}
@@ -301,8 +298,9 @@ class Settings:
     signals = SettingsSignals()
 
     def __init__(self):
+        self.pathinfo = Pathinfo()
         # create settings.yaml with defaults if it does not exist
-        if not os.path.exists(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'settings.yaml')):
+        if not os.path.exists(self.pathinfo.settings):
             save = {
                 'apiCallsPerDay': self.apiCallsPerDay,
                 'automaticInterval': self.automaticInterval,
@@ -311,11 +309,11 @@ class Settings:
                 'enableAudioNotification': self.enableAudioNotification,
                 'enableDesktopNotification': self.enableDesktopNotification,
             }
-            with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'settings.yaml'), "w") as fd:
+            with open(self.pathinfo.settings, "w") as fd:
                 yaml.dump(save, fd)
 
     def load(self):
-        with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'settings.yaml'), "r") as fd:
+        with open(self.pathinfo.settings, "r") as fd:
             settings = yaml.load(fd, Loader=yaml.SafeLoader)
             self.apiCallsPerDay = settings['apiCallsPerDay']
             self.automaticInterval = settings['automaticInterval']
@@ -325,7 +323,7 @@ class Settings:
             self.enableDesktopNotification = settings['enableDesktopNotification']
 
     def save(self):
-        with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'settings.yaml'), "r") as fd:
+        with open(self.pathinfo.settings, "r") as fd:
             settings = yaml.load(fd, Loader=yaml.SafeLoader)
         
         save = {
@@ -337,7 +335,7 @@ class Settings:
             'enableDesktopNotification': self.enableDesktopNotification,
         }
 
-        with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'settings.yaml'), "w") as fd:
+        with open(self.pathinfo.settings, "w") as fd:
             yaml.dump(save, fd)
 
         self.signals.reload.emit(True)
