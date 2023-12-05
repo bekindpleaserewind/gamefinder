@@ -9,6 +9,19 @@ In order to access the Ebay API, you will need a set of four different productio
 
 Visit https://developer.ebay.com/api-docs/static/gs_create-the-ebay-api-keysets.html to continue creating Ebay Developer Program production keys for API access use with your Gamefinder installation.
 
+## Usage
+Both a native Windows 11 executable is available at https://github.com/bekindpleaserewind/gamefinder/releases as is the complete source code under the GPLv3 license.
+
+### Binary (Windows 11)
+If you are on windows, just execute the Windows 11 executable and you should be good to go.
+
+### Source
+If you're running through source, you need to go through the following steps:
+
+1. Install the pip modules by running ```pip install -r pip.txt```. I recommend doing this is a venv dedicated to Gamefinder.
+2. Ensure that the alerts/icons directories are in the same location as the source code (it is auto resolved in path.py).
+3. Execute ```python gamefinder.py```.
+
 ## Support
 If you're feeling supportive today, you can buy me a cup of coffee at https://www.buymeacoffee.com/bekindpleaserewind
 

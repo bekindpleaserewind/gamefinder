@@ -8,13 +8,51 @@ import uuid
 
 import iso3166
 
-from PySide6.QtGui import QIcon, QAction, QColor, QDesktopServices
-from PySide6.QtCore import QThreadPool, QSize, Qt
-from PySide6.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QMainWindow, QWidget, QHBoxLayout, QLabel, QHeaderView, QTableWidget, QTableWidgetItem, QAbstractItemView, QSizePolicy, QDialog, QComboBox, QTreeWidgetItem, QButtonGroup
+# PySide6
+from PySide6.QtGui import (
+    QIcon, 
+    QAction, 
+    QColor, 
+    QDesktopServices
+)
 
+from PySide6.QtCore import (
+    Qt,
+    QSize, 
+    QThreadPool, 
+)
+
+from PySide6.QtWidgets import (
+    QAbstractItemView, 
+    QApplication, 
+    QButtonGroup,
+    QComboBox, 
+    QDialog, 
+    QHBoxLayout, 
+    QHeaderView, 
+    QLabel, 
+    QMainWindow, 
+    QMenu, 
+    QSizePolicy, 
+    QSystemTrayIcon, 
+    QTableWidget, 
+    QTableWidgetItem, 
+    QTreeWidgetItem, 
+    QWidget, 
+)
+
+# Local code
 from appinfo import Info
+from path import Pathinfo
 from signals import AppSignals
-from businesslogic import GameFinder, Worker, Conditions, SavedPlatforms, Settings
+
+from businesslogic import (
+    GameFinder, 
+    Worker, 
+    Conditions, 
+    SavedPlatforms, 
+    Settings
+)
 
 from mainwindow import Ui_MainWindow
 from setupwizard import SetupWizard
@@ -37,7 +75,7 @@ def handler(signum, frame):
     pass
 
 class App:
-    def __init__(self, qtApp, foreground = False):
+    def __init__(self, qtApp):
         self.app = qtApp
         self.signals = AppSignals()
         self.worker = None
@@ -115,10 +153,12 @@ class IconStatusBar(QWidget, Ui_widgetmin):
         super(IconStatusBar, self).__init__()
         self.setupUi(self)
 
+        self.pathinfo = Pathinfo()
+
         if state == ONLINE:
-            self.icon = QIcon(os.path.join(sys._MEIPASS, 'online.png'))
+            self.icon = QIcon(self.pathinfo.icon.online)
         elif state == OFFLINE:
-            self.icon = QIcon(os.path.join(sys._MEIPASS, 'online.png'))
+            self.icon = QIcon(self.pathinfo.icon.offline)
         else:
             return
 
@@ -158,7 +198,6 @@ class LinkWidget(QWidget):
         self.link.setContentsMargins(0, 0, 0, 0)
         self.link.setStyleSheet("background-color: {}".format(color))
         self.link.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
-        #self.link.setTextInteractionFlags(Qt.TextBrowserInteraction)
         self.link.setOpenExternalLinks(False)
         self.link.setText("<a href=\"{}\">{}</a>".format(url, url))
         self.link.setAutoFillBackground(True)
@@ -331,6 +370,9 @@ class Platform:
     platforms = {}
     models = {}
 
+    def __init__(self):
+        self.pathinfo = Pathinfo()
+
     def addPlatform(self, search, category, locations, conditions, platform = None, model = None):
         id = str(uuid.uuid4())
         self.search[id] = search
@@ -341,8 +383,8 @@ class Platform:
         self.conditions[id] = conditions
         
         config = {}
-        if os.path.exists(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'platforms.yaml')):
-            with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'platforms.yaml'), "r") as fd:
+        if os.path.exists(self.pathinfo.platforms):
+            with open(self.pathinfo.platforms, "r") as fd:
                 config = yaml.load(fd, Loader=yaml.SafeLoader)
 
         config[id] = {
@@ -363,7 +405,7 @@ class Platform:
         if len(self.conditions[id]) > 0:
             config[id]['itemFilters']['Conditions'] = self.conditions[id]
         
-        with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'platforms.yaml'), "w") as fd:
+        with open(self.pathinfo.platforms, "w") as fd:
             yaml.dump(config, fd)
 
         return(id)
@@ -372,7 +414,9 @@ class AboutDialog(QDialog, Ui_About):
     def __init__(self, parent = None):
         super(AboutDialog, self).__init__(parent)
         self.setupUi(self)
-        icon = QIcon(os.path.join(sys._MEIPASS, 'gamefinder_logo_whitebackground.png'))
+        self.pathinfo = Pathinfo()
+
+        icon = QIcon(self.pathinfo.logo.normal)
         pixmap = icon.pixmap(QSize(128, 128))
         self.logo.setPixmap(pixmap)
 
@@ -383,6 +427,8 @@ class PlatformsDialog(QDialog, Ui_Platforms):
         self.categoryToItemFilters = {}
         self.categoryToAspectFilters = {}
         self.setupUi(self)
+
+        self.pathinfo = Pathinfo()
 
         self.results = []
         self.saves = False
@@ -578,10 +624,10 @@ class PlatformsDialog(QDialog, Ui_Platforms):
             targetType = target.data(0, Qt.UserRole)
             if targetType == TYPE_ID:
                 configId = target.text(0)
-                with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'platforms.yaml'), "r") as fd:
+                with open(self.pathinfo.platforms, "r") as fd:
                     config = yaml.load(fd, Loader=yaml.SafeLoader)
 
-                with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'platforms.yaml'), "w") as fd:
+                with open(self.pathinfo.platforms, "w") as fd:
                     del config[configId]
                     yaml.dump(config, fd)
 
@@ -729,16 +775,16 @@ class PlatformsDialog(QDialog, Ui_Platforms):
     def loadCategory(self, loadUi = True):
         self.categoryToAspectFilters = {}
 
-        if os.path.exists(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'platforms.yaml')):
+        if os.path.exists(self.pathinfo.platforms):
             # Load configuration id
-            with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'platforms.yaml'), 'r') as fd:
+            with open(self.pathinfo.platforms, 'r') as fd:
                 configData = yaml.safe_load(fd)
                 for configId in configData:
                     self.categoryToAspectFilters[configId]  = {
                         'aspectFilters': configData[configId]['aspectFilters'],
                     }
             # Load aspectFilter category names and ids
-            with open(os.path.join(sys._MEIPASS, 'aspectfilters.yaml'), 'r') as fd:
+            with open(self.pathinfo.aspectfilters, 'r') as fd:
                 aspectFilterData = yaml.safe_load(fd)
 
                 # Get each configuration id
@@ -762,7 +808,7 @@ class PlatformsDialog(QDialog, Ui_Platforms):
                 self.category.addItem(category, userData = categories[category])
 
             # Load any missing categories:
-            with open(os.path.join(sys._MEIPASS, 'aspectfilters.yaml'), 'r') as fd:
+            with open(self.pathinfo.aspectfilters, 'r') as fd:
                 aspectFilterData = yaml.safe_load(fd)
                 for categoryId in aspectFilterData.keys():
                     name = aspectFilterData[categoryId]['name']
@@ -984,6 +1030,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         super(MainWindow, self).__init__()
         self.setupUi(self)
 
+        self.pathinfo = Pathinfo()
         self.running = False
 
         self.settings = Settings()
@@ -991,7 +1038,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.settings.load()
 
         # Set our window icon
-        self.setWindowIcon(QIcon(os.path.join(sys._MEIPASS, 'gamefinder_logo_whitebackground_small.png')))
+        self.setWindowIcon(QIcon(self.pathinfo.logo.small))
 
         # Create a new gamefinder application and configure signals
         self.gamefinder = App(app)
@@ -1009,23 +1056,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.actionAbout.triggered.connect(self.about)
 
         # System tray
-        self.trayIcon = QIcon(os.path.join(sys._MEIPASS, 'gamefinder_logo_whitebackground.png'))
+        self.trayIcon = QIcon(self.pathinfo.logo.normal)
         self.tray = SystemTrayIcon(self.trayIcon, self.gamefinder, self)
 
         # Setup toolbar
         self.toolBar.setIconSize(QSize(24, 24))
 
         # Toolbar start button
-        self.button_start = QAction(QIcon(os.path.join(sys._MEIPASS, 'start.png')), "Start", self)
+        self.button_start = QAction(QIcon(self.pathinfo.icon.start), "Start", self)
         self.button_start.setStatusTip("Start Searching")
         self.button_start.triggered.connect(self.start)
-        if os.path.exists(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'ebay.yaml')):
+        if os.path.exists(self.pathinfo.ebay):
             self.button_start.setDisabled(False)
         else:
             self.button_start.setDisabled(True)
         self.toolBar.addAction(self.button_start)
         # Toolbar stop button
-        self.button_stop = QAction(QIcon(os.path.join(sys._MEIPASS, 'stop.png')), "Stop", self)
+        self.button_stop = QAction(QIcon(self.pathinfo.icon.stop), "Stop", self)
         self.button_stop.setStatusTip("Stop Searching")
         self.button_stop.triggered.connect(self.stop)
         self.button_stop.setDisabled(True)
@@ -1034,14 +1081,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.toolBar.addSeparator()
 
         # Toolbar tally button
-        self.button_clear = QAction(QIcon(os.path.join(sys._MEIPASS, 'tally.png')), "Clear", self)
+        self.button_clear = QAction(QIcon(self.pathinfo.icon.tally), "Clear", self)
         self.button_clear.setStatusTip("Mark Results Read")
         self.button_clear.triggered.connect(self.markResultsRead)
         self.button_clear.setDisabled(False)
         self.toolBar.addAction(self.button_clear)
 
         # Toolbar delete button
-        self.button_trash = QAction(QIcon(os.path.join(sys._MEIPASS, 'trash.png')), "Delete", self)
+        self.button_trash = QAction(QIcon(self.pathinfo.icon.trash), "Delete", self)
         self.button_trash.setStatusTip("Delete Read Results")
         self.button_trash.triggered.connect(self.trashReadResults)
         self.button_trash.setDisabled(False)
@@ -1050,13 +1097,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.toolBar.addSeparator()
         
         # Toolbar platforms button
-        self.button_platforms = QAction(QIcon(os.path.join(sys._MEIPASS, 'platforms.png')), "Platforms", self)
+        self.button_platforms = QAction(QIcon(self.pathinfo.icon.platform), "Platforms", self)
         self.button_platforms.setStatusTip("Searching and Platforms")
         self.button_platforms.triggered.connect(self.displayPlatformsDialog)
         self.button_platforms.setDisabled(False)
         self.toolBar.addAction(self.button_platforms)
         # Toolbar Credentials
-        self.button_credentials = QAction(QIcon(os.path.join(sys._MEIPASS, 'credentials.png')), "Credentials", self)
+        self.button_credentials = QAction(QIcon(self.pathinfo.icon.credentials), "Credentials", self)
         self.button_credentials.setStatusTip("Credentials")
         self.button_credentials.triggered.connect(self.displayAuthenticationSetup)
         self.button_credentials.setDisabled(False)
@@ -1067,7 +1114,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.toolBar.addWidget(toolbarSpacer)
 
         # Toolbar Settings (align right)
-        self.button_settings = QAction(QIcon(os.path.join(sys._MEIPASS, 'settings.png')), "Settings", self)
+        self.button_settings = QAction(QIcon(self.pathinfo.icon.settings), "Settings", self)
         self.button_settings.setStatusTip("Settings")
         self.button_settings.triggered.connect(self.displaySettingsDialog)
         self.button_settings.setDisabled(False)
@@ -1169,7 +1216,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def loadTableState(self):
         # Load existing saved state on a best try effort
         try:
-            with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'state.yaml'), "r") as fd:
+            with open(self.pathinfo.state, "r") as fd:
                 data = yaml.load(fd, Loader=yaml.SafeLoader)
                 for row in data['state']:
                     self.tableWidget.addData([row['values']], row['activated'])
@@ -1209,7 +1256,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     ],
                 })
 
-        with open(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'state.yaml'), "w") as fd:
+        with open(self.pathinfo.state, "w") as fd:
             yaml.dump(data, fd)
 
     def isRunning(self):
@@ -1232,26 +1279,25 @@ if __name__ == "__main__":
     app = QApplication([])
     app.setQuitOnLastWindowClosed(False)
 
-    if Info.FROZEN:
-        appData = os.path.join(os.environ['APPDATA'], Info.APPNAME)
-        ebayYaml = os.path.join(appData, 'ebay.yaml')
+    pathinfo = Pathinfo()
+    if not os.path.exists(pathinfo.app):
+         os.mkdir(pathinfo.app)
 
-        if not os.path.exists(appData):
-             os.mkdir(appData)
+    window = MainWindow()
 
-        window = MainWindow()
+    if not os.path.exists(pathinfo.ebay):
+        window.show()
+        window.activateWindow()
+        wizard = SetupWizard(window)
+        wizard.show()
+    else:
+        window.show()
+        window.activateWindow()
 
-        if not os.path.exists(os.path.join(os.environ['APPDATA'], Info.APPNAME, 'ebay.yaml')):
-            window.show()
-            window.activateWindow()
-            wizard = SetupWizard(window)
-            wizard.show()
-        else:
-            window.show()
-            window.activateWindow()
+     # Start QT Application
+    rCode = app.exec()
 
-         # Start QT Application
-        app.exec()
+    # Wait for threads to exit
+    window.reap()
 
-        # Wait for threads to exit
-        window.reap()
+    sys.exit(rCode)
