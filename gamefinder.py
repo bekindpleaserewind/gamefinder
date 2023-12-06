@@ -288,11 +288,13 @@ class TableWidget(QTableWidget):
         for i in range(0, 6):
             items.append(self.item(row, i))
 
-        color = self.getColorFromHex("FFFFFF")
+        background = self.getColorFromHex("FFFFFF")
+        foreground = self.getColorFromHex("000000")
 
         for item in items:
             if item:
-                item.setBackground(color)
+                item.setBackground(background)
+                item.setForeground(foreground)
 
         widget = self.cellWidget(row, 6)
         if widget:
