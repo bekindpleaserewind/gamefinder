@@ -428,6 +428,8 @@ class PlatformsDialog(QDialog, Ui_Platforms):
         self.categoryToAspectFilters = {}
         self.setupUi(self)
 
+        parent.stop()
+
         self.pathinfo = Pathinfo()
 
         self.results = []
@@ -683,8 +685,10 @@ class PlatformsDialog(QDialog, Ui_Platforms):
             if item.index().row() == 0:
                 self.clickTracker = True
                 item.setCheckState(Qt.Unchecked)
-            elif self.countLocations >= 25:
-                # Max locations supported by ebay api is 25
+            elif self.countLocations >= 1:
+                # Max locations supported by ebay api is 25 according to documentation
+                # however, the api currently fails when you supply more than one location!
+                # Limited to 1 for the time being.
                 self.clickTracker = True
                 item.setCheckState(Qt.Unchecked)
             else:
@@ -710,7 +714,7 @@ class PlatformsDialog(QDialog, Ui_Platforms):
             # Do not support checking first item (it is informational only)
             if item.index().row() == 0:
                 item.setCheckState(Qt.Unchecked)
-
+    
     def addLocationCheckComboItem(self, item, value, checked = False):
         self.locations.addItem(item, userData=value)
         item = self.locations.model().item(self.locationComboItemCount, 0)
@@ -1152,7 +1156,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.statusbar.addPermanentWidget(self.iconStatusBar)
 
     def displayPlatformsDialog(self, *args, **kwargs):
-        dialog = PlatformsDialog()
+        dialog = PlatformsDialog(parent = self)
         dialog.exec()
     
     def displaySettingsDialog(self, *args, **kwargs):

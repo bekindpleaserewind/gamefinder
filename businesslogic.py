@@ -1,3 +1,4 @@
+import pprint
 import os
 import sys
 import time
@@ -175,15 +176,19 @@ class Worker(QRunnable):
                         platforms = yaml.load(fd, Loader=yaml.SafeLoader)
                         platformCount = len(platforms.keys())
                     
-                    maxApiCallsPerPlatform = int(self.settings.apiCallsPerDay) / int(platformCount)
+                    if platformCount > 0:
+                        maxApiCallsPerPlatform = int(self.settings.apiCallsPerDay) / int(platformCount)
 
-                    interval = 0
-                    seconds = 60
-                    maxSecondsPerPlatforms = 0
+                        interval = 0
+                        seconds = 60
+                        maxSecondsPerPlatforms = 0
 
-                    while maxSecondsPerPlatforms < 86400:
-                        interval += 1
-                        maxSecondsPerPlatforms = maxApiCallsPerPlatform * seconds * interval
+                        while maxSecondsPerPlatforms < 86400:
+                            interval += 1
+                            maxSecondsPerPlatforms = maxApiCallsPerPlatform * seconds * interval
+                    else:
+                        # no platforms to monitor, default to interval of 1 minute
+                        interval = 1
 
                 while self.running and count < 60 * interval * 4:
                     time.sleep(0.25)
@@ -242,8 +247,8 @@ class SavedPlatforms:
 
     def conditionIds(self, id):
         try:
-            conditions = [self.saved[id]['itemFilters']['Condition']]
-        except:
+            conditions = self.saved[id]['itemFilters']['Conditions']
+        except Exception as e:
             conditions = []
         return conditions
 
@@ -257,7 +262,7 @@ class SavedPlatforms:
 
     def location(self, id):
         try:
-            location = [self.saved[id]['itemFilters']['LocatedIn']]
+            location = self.saved[id]['itemFilters']['LocatedIn']
         except:
             location = []
         return location
