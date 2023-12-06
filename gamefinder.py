@@ -772,6 +772,7 @@ class PlatformsDialog(QDialog, Ui_Platforms):
         self.addLocationCheckComboItem("World Wide", "WorldWide", True)
         self.addLocationCheckComboItem("North America", "North America")
         self.addLocationCheckComboItem("European", "European")
+        self.countLocations = 1
 
         for country in iso3166.countries:
             self.addLocationCheckComboItem(country.name, country.alpha2)
