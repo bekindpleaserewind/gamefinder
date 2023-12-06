@@ -5,6 +5,7 @@ import sys
 import signal
 import yaml
 import uuid
+import logging
 
 import iso3166
 
@@ -499,7 +500,7 @@ class PlatformsDialog(QDialog, Ui_Platforms):
                 elif aspectFilterType == "Model":
                     items[configId]['models'] = self.saves.model(configId)
                 else:
-                    print("Aspect filter '{}' not supported".format(aspectFilterType))
+                    logging.warn("Aspect filter '{}' not supported".format(aspectFilterType))
 
         self.root.clear()
         self.root.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -561,23 +562,23 @@ class PlatformsDialog(QDialog, Ui_Platforms):
         if currentData:
             category = currentData[0]
             if not category:
-                print("No Category Selected")
+                logging.debug("No Category Selected")
                 return False
         
             if category == 139973:
                 platforms = self.getPlatforms()
                 if len(platforms) == 0:
-                    print("No Platforms Selected")
+                    logging.debug("No Platforms Selected")
                     return False
             elif category == 260000:
                 models = self.getModels()
                 if len(models) == 0:
-                    print("No Models Selected")
+                    logging.debug("No Models Selected")
                     return False
 
             locations = self.getLocations()
             if len(locations) == 0:
-                print("No locations selected")
+                logging.debug("No locations selected")
                 return False
 
             conditions = []
@@ -661,7 +662,7 @@ class PlatformsDialog(QDialog, Ui_Platforms):
                     child = parent.child(n)
                     targets.append(child)
             else:
-                print("Invalid Item Type")
+                logging.error("Invalid Item Type")
 
         return targets
 
@@ -862,7 +863,7 @@ class PlatformsDialog(QDialog, Ui_Platforms):
                     if len(item) > 0:
                         self.addModelCheckComboItem(item, item)
             else:
-                print("Category '{}' not supported when updating categories".format(categoryId))
+                logging.error("Category '{}' not supported when updating categories".format(categoryId))
 
     def getPlatforms(self):
         platforms = []
@@ -1288,21 +1289,31 @@ if __name__ == "__main__":
     if not os.path.exists(pathinfo.app):
          os.mkdir(pathinfo.app)
 
-    window = MainWindow()
+    logging.basicConfig(filename=pathinfo.log,
+                        filemode='a',
+                        format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+                        datefmt='%H:%M:%S',
+                        level=logging.INFO)
 
-    if not os.path.exists(pathinfo.ebay):
-        window.show()
-        window.activateWindow()
-        wizard = SetupWizard(window)
-        wizard.show()
-    else:
-        window.show()
-        window.activateWindow()
+    try:
+        window = MainWindow()
 
-     # Start QT Application
-    rCode = app.exec()
+        if not os.path.exists(pathinfo.ebay):
+            window.show()
+            window.activateWindow()
+            wizard = SetupWizard(window)
+            wizard.show()
+        else:
+            window.show()
+            window.activateWindow()
 
-    # Wait for threads to exit
-    window.reap()
+        # Start QT Application
+        rCode = app.exec()
+
+        # Wait for threads to exit
+        window.reap()
+    except:
+        logging.exception('Got exception on main')
+        raise
 
     sys.exit(rCode)
