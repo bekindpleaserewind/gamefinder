@@ -1,6 +1,8 @@
 # Gamefinder
 Introducing an Ebay developer application specifically tuned to monitor listings of gaming products.  Give it a try, monitoring the API gives you a heads up over watching the main website!
 
+![Gamefinder Screenshot](https://raw.githubusercontent.com/bekindpleaserewind/gamefinder/main/screenshot.png)
+
 ## Registration
 The very first thing you need to do is register for API access on the Ebay Developer Program at https://developer.ebay.com.  Ebay will take around one complete business day to turn around the registration and approve it.  Once this step is done you can continue to the Access Keys section below.
 
