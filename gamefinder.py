@@ -331,22 +331,30 @@ class TableWidget(QTableWidget):
         return(color)
 
     def generateRow(self, row, noColor = False):
+        foreground = self.getColorFromHex("000000")
         if noColor:
             color = self.getColorFromHex("ffffff")
         else:
             color = self.getColorFromHex("92d050")
+
         itemId = QTableWidgetItem(row[0])
         itemId.setBackground(color)
+        itemId.setForeground(foreground)
         title = QTableWidgetItem(row[1])
         title.setBackground(color)
+        title.setForeground(foreground)
         price = QTableWidgetItem(row[2]) 
         price.setBackground(color)
+        price.setForeground(foreground)
         currency = QTableWidgetItem(row[3])
         currency.setBackground(color)
+        currency.setForeground(foreground)
         bestOffer = QTableWidgetItem(row[4])
         bestOffer.setBackground(color)
+        bestOffer.setForeground(foreground)
         buyItNow = QTableWidgetItem(row[5])
         buyItNow.setBackground(color)
+        buyItNow.setForeground(foreground)
 
         if noColor:
             link = LinkWidget(row[6], "#ffffff", [itemId, title, price, currency, bestOffer, buyItNow], self)
