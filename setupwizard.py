@@ -18,11 +18,11 @@ class SetupWizardPage1(QWizardPage, Ui_WizardPage1):
     def __init__(self):
         super(SetupWizardPage1, self).__init__()
         self.setupUi(self)
-        self.pathinfo = Pathinfo()
 
 class SetupWizardPage2(QWizardPage, Ui_WizardPage2):
     def __init__(self):
         super(SetupWizardPage2, self).__init__()
+        self.pathinfo = Pathinfo()
         self.setupUi(self)
         self.registerField('production_appid*', self.lineEditAppid)
         self.registerField('production_certid*', self.lineEditCertid)
