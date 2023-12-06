@@ -1,9 +1,9 @@
-import pprint
 import os
 import sys
 import time
 import json
 import yaml
+import logging
 import decimal
 import babel.numbers
 from pygame import mixer
@@ -53,7 +53,7 @@ class GameFinder(FindingConnection, QObject):
                 if check != None:
                     api_request['categoryId'] = check
                 else:
-                    print("categoryId is required")
+                    logging.critical("categoryId is required")
                     sys.exit(0)
 
                 check = platform_config[platform].get('keywords')
@@ -78,8 +78,8 @@ class GameFinder(FindingConnection, QObject):
                 j = json.loads(response.json())
 
                 if j['ack'] != 'Success':
-                    print("Search failed")
-                    print(str(response.json()))
+                    logging.error("Search failed")
+                    logging.error("{}".format(str(response.json())))
                     continue
 
                 latest_auction_stamp = j['searchResult']['item'][0]['listingInfo']['startTime']
@@ -109,7 +109,9 @@ class GameFinder(FindingConnection, QObject):
                         datas.append([
                             item['itemId'],
                             item['title'],
-                            babel.numbers.format_currency(decimal.Decimal(item['sellingStatus']['currentPrice']['value']), item['sellingStatus']['currentPrice']['_currencyId']),
+                            # Note that locale is required.
+                            # Otherwise you will see this https://github.com/python-babel/babel/issues/977
+                            babel.numbers.format_currency(decimal.Decimal(item['sellingStatus']['currentPrice']['value']), item['sellingStatus']['currentPrice']['_currencyId'], locale='en_US'),
                             item['sellingStatus']['currentPrice']['_currencyId'],
                             item['listingInfo']['bestOfferEnabled'],
                             item['listingInfo']['buyItNowAvailable'],
@@ -118,10 +120,10 @@ class GameFinder(FindingConnection, QObject):
                         items.append(item['title'])
 
                 itemCount = len(items)
+
                 # Audio Notification
                 if self.settings.enableAudioNotification and itemCount > 0:
                     mixer.music.load(self.pathinfo.music.games)
-
                     if not mixer.get_busy():
                         mixer.music.play()
 
@@ -135,8 +137,8 @@ class GameFinder(FindingConnection, QObject):
                 self.signals.data.emit(datas)
 
         except ConnectionError as e:
-            print(e)
-            print(e.response.dict())
+            logging.error(e)
+            logging.error("{}".format(str(e)))
 
 class Worker(QRunnable):
     def __init__(self):
