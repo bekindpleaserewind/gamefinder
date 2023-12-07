@@ -82,6 +82,10 @@ class GameFinder(FindingConnection, QObject):
                     logging.error("{}".format(str(response.json())))
                     continue
 
+                if int(j['searchResult']['_count']) < 1:
+                    logging.info("No search results found for category '{}'".format(platform_config[platform].get('categoryId')))
+                    continue
+
                 latest_auction_stamp = j['searchResult']['item'][0]['listingInfo']['startTime']
                 latest_timestamp = time.mktime(time.strptime(latest_auction_stamp, "%Y-%m-%dT%H:%M:%S.%fZ"))
                 last_timestamp = 0

@@ -406,9 +406,9 @@ class Platform:
             'itemFilters': {},
         }
 
-        if (category == 139973 or category == 182174) and self.platforms[id] is not None:
+        if (category == 139973 or category == 182174 or category == 54968 or category == 182175) and self.platforms[id] is not None:
             config[id]['aspectFilters']['Platform'] = self.platforms[id]
-        elif (category == 260000 or category == 139971) and self.models[id] is not None:
+        if (category == 260000 or category == 139971 or category == 182175) and self.models[id] is not None:
             config[id]['aspectFilters']['Model'] = self.models[id]
 
         if len(self.locations[id]) > 0:
@@ -575,15 +575,21 @@ class PlatformsDialog(QDialog, Ui_Platforms):
                 logging.debug("No Category Selected")
                 return False
         
-            if category == 139973 or category == 182174:
+            if category == 139973 or category == 182174 or category == 54968:
                 platforms = self.getPlatforms()
                 if len(platforms) == 0:
                     logging.debug("No Platforms Selected")
                     return False
-            elif category == 260000 or category == 139971:
+            if category == 260000 or category == 139971:
                 models = self.getModels()
                 if len(models) == 0:
                     logging.debug("No Models Selected")
+                    return False
+            if category == 182175:
+                platforms = self.getPlatforms()
+                models = self.getModels()
+                if len(platforms) == 0 or len(models) == 0:
+                    logging.debug("No Platforms or Models Selected")
                     return False
 
             locations = self.getLocations()
@@ -602,10 +608,12 @@ class PlatformsDialog(QDialog, Ui_Platforms):
                     conditions.append(condition)
 
             result = Platform()
-            if category == 139973 or category == 182174:
+            if category == 139973 or category == 182174 or category == 54968:
                 result.addPlatform(search, category, locations, conditions, platform = platforms)
-            else:
+            elif category == 260000 or category == 139971:
                 result.addPlatform(search, category, locations, conditions, model = models)
+            elif category == 182175:
+                result.addPlatform(search, category, locations, conditions, platform = platforms, model = models)
 
             self.resetUi()
             self.loadSaved()
@@ -840,7 +848,8 @@ class PlatformsDialog(QDialog, Ui_Platforms):
             categoryId = self.category.currentData()[0]
             configId = self.category.currentData()[1]
 
-            if categoryId == 139973 or categoryId == 182174:
+            # Show just Platform
+            if categoryId == 139973 or categoryId == 182174 or categoryId == 54968:
                 #   aspectFilters:
                 #       Platform
                 self.models.hide()
@@ -856,8 +865,7 @@ class PlatformsDialog(QDialog, Ui_Platforms):
                     if len(item) > 0 and item is not None:
                         self.addPlatformCheckComboItem(item, item)
             elif categoryId == 260000 or categoryId == 139971:
-                #   aspectFilters:
-                #       Model
+                # Show just Model
                 self.platforms.hide()
                 self.platformsLabel.hide()
                 self.models.show()
@@ -870,8 +878,28 @@ class PlatformsDialog(QDialog, Ui_Platforms):
                 for item in models:
                     if len(item) > 0:
                         self.addModelCheckComboItem(item, item)
-            else:
-                logging.error("Category '{}' not supported when updating categories".format(categoryId))
+            elif categoryId == 182175:
+                # Show Platform and Model
+                self.models.show()
+                self.modelsLabel.show()
+                self.platforms.show()
+                self.platformsLabel.show()
+
+                self.platforms.clear()
+                self.addPlatformCheckComboItem("Select Platforms", False)
+
+                platforms = self.saves.platform(categoryId, True)
+                for item in platforms:
+                    if len(item) > 0 and item is not None:
+                        self.addPlatformCheckComboItem(item, item)
+
+                self.models.clear()
+                self.addModelCheckComboItem("Select Models", False)
+
+                models = self.saves.model(categoryId, True)
+                for item in models:
+                    if len(item) > 0:
+                        self.addModelCheckComboItem(item, item)
 
     def getPlatforms(self):
         platforms = []
