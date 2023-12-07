@@ -408,7 +408,7 @@ class Platform:
 
         if category == 139973 and self.platforms[id] is not None:
             config[id]['aspectFilters']['Platform'] = self.platforms[id]
-        elif category == 260000 and self.models[id] is not None:
+        elif (category == 260000 or category == 139971) and self.models[id] is not None:
             config[id]['aspectFilters']['Model'] = self.models[id]
 
         if len(self.locations[id]) > 0:
@@ -580,7 +580,7 @@ class PlatformsDialog(QDialog, Ui_Platforms):
                 if len(platforms) == 0:
                     logging.debug("No Platforms Selected")
                     return False
-            elif category == 260000:
+            elif category == 260000 or category == 139971:
                 models = self.getModels()
                 if len(models) == 0:
                     logging.debug("No Models Selected")
@@ -856,7 +856,7 @@ class PlatformsDialog(QDialog, Ui_Platforms):
                 for item in platforms:
                     if len(item) > 0 and item is not None:
                         self.addPlatformCheckComboItem(item, item)
-            elif categoryId == 260000:
+            elif categoryId == 260000 or categoryId == 139971:
                 # Video Game & Console Mixed Lots
                 #   aspectFilters:
                 #       Model
