@@ -4,6 +4,7 @@ import time
 import json
 import yaml
 import logging
+import requests
 import decimal
 import babel.numbers
 from pygame import mixer
@@ -16,6 +17,15 @@ from signals import GameFinderSignals, WorkerSignals, SettingsSignals
 from ebaysdk.finding import Connection as FindingConnection
 from ebaysdk.exception import ConnectionError
 
+class SlackWebhook:
+    def __init__(self, url):
+        self.url = url
+
+    def post(self, message):
+        if self.url:
+            query = {'text': message}
+            requests.post(self.url, json = query)
+            
 class GameFinder(FindingConnection, QObject):
     def __init__(self):
         self.signals = GameFinderSignals()
@@ -137,6 +147,18 @@ class GameFinder(FindingConnection, QObject):
                     for i in items[0:2]:
                         notification += "\n{}".format(i)
                     self.signals.notify.emit((Info.APPNAME, notification))
+
+                # Slack Notification
+                if self.settings.enableSlackNotification and self.settings.enableSlackNotificationWebhook and itemCount > 0:
+                    notification = "Found {} items".format(itemCount)
+                    for i in items[0:2]:
+                        notification += "\n{}".format(i)
+                    
+                    slack = SlackWebhook(self.settings.enableSlackNotificationWebhook)
+                    try:
+                        slack.post(notification)
+                    except Exception as e:
+                        logging.warn("{}".format(str(e)))
 
                 self.signals.data.emit(datas)
 
@@ -305,6 +327,8 @@ class Settings:
     searchOnStartup = False
     enableAudioNotification = True
     enableDesktopNotification = True
+    enableSlackNotification = True
+    enableSlackNotificationWebhook = False
 
     signals = SettingsSignals()
 
@@ -319,6 +343,8 @@ class Settings:
                 'searchOnStartup': self.searchOnStartup,
                 'enableAudioNotification': self.enableAudioNotification,
                 'enableDesktopNotification': self.enableDesktopNotification,
+                'enableSlackNotification': self.enableSlackNotification,
+                'enableSlackNotificationWebhook': self.enableSlackNotificationWebhook,
             }
             with open(self.pathinfo.settings, "w") as fd:
                 yaml.dump(save, fd)
@@ -332,11 +358,10 @@ class Settings:
             self.searchOnStartup = settings['searchOnStartup']
             self.enableAudioNotification = settings['enableAudioNotification']
             self.enableDesktopNotification = settings['enableDesktopNotification']
+            self.enableSlackNotification = settings.get('enableSlackNotification', False)
+            self.enableSlackNotificationWebhook = settings.get('enableSlackNotificationWebhook', False)
 
     def save(self):
-        with open(self.pathinfo.settings, "r") as fd:
-            settings = yaml.load(fd, Loader=yaml.SafeLoader)
-        
         save = {
             'apiCallsPerDay': self.apiCallsPerDay,
             'automaticInterval': self.automaticInterval,
@@ -344,6 +369,8 @@ class Settings:
             'searchOnStartup': self.searchOnStartup,
             'enableAudioNotification': self.enableAudioNotification,
             'enableDesktopNotification': self.enableDesktopNotification,
+            'enableSlackNotification': self.enableSlackNotification,
+            'enableSlackNotificationWebhook': self.enableSlackNotificationWebhook,
         }
 
         with open(self.pathinfo.settings, "w") as fd:

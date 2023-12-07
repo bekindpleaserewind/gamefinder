@@ -24,7 +24,7 @@ class Ui_Settings(object):
     def setupUi(self, Settings):
         if not Settings.objectName():
             Settings.setObjectName(u"Settings")
-        Settings.resize(400, 300)
+        Settings.resize(582, 346)
         self.verticalLayout_2 = QVBoxLayout(Settings)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.ebayGroupBox = QGroupBox(Settings)
@@ -43,7 +43,7 @@ class Ui_Settings(object):
 
         self.horizontalLayout_2.addWidget(self.apiCallsPerDay)
 
-        self.horizontalSpacer_2 = QSpacerItem(120, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer_2 = QSpacerItem(180, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
 
         self.horizontalLayout_2.addItem(self.horizontalSpacer_2)
 
@@ -169,6 +169,41 @@ class Ui_Settings(object):
 
         self.formLayout_2.setLayout(2, QFormLayout.FieldRole, self.horizontalLayout_5)
 
+        self.slackLabel = QLabel(self.systemGroupBox)
+        self.slackLabel.setObjectName(u"slackLabel")
+
+        self.formLayout_2.setWidget(3, QFormLayout.LabelRole, self.slackLabel)
+
+        self.verticalLayout_3 = QVBoxLayout()
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.horizontalLayout_6 = QHBoxLayout()
+        self.horizontalLayout_6.setObjectName(u"horizontalLayout_6")
+        self.enableSlackNotificationOn = QRadioButton(self.systemGroupBox)
+        self.enableSlackNotificationOn.setObjectName(u"enableSlackNotificationOn")
+
+        self.horizontalLayout_6.addWidget(self.enableSlackNotificationOn)
+
+        self.enableSlackNotificationOff = QRadioButton(self.systemGroupBox)
+        self.enableSlackNotificationOff.setObjectName(u"enableSlackNotificationOff")
+
+        self.horizontalLayout_6.addWidget(self.enableSlackNotificationOff)
+
+        self.horizontalSpacer_6 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_6.addItem(self.horizontalSpacer_6)
+
+
+        self.verticalLayout_3.addLayout(self.horizontalLayout_6)
+
+        self.slackLineEdit = QLineEdit(self.systemGroupBox)
+        self.slackLineEdit.setObjectName(u"slackLineEdit")
+        self.slackLineEdit.setMinimumSize(QSize(384, 0))
+
+        self.verticalLayout_3.addWidget(self.slackLineEdit)
+
+
+        self.formLayout_2.setLayout(3, QFormLayout.FieldRole, self.verticalLayout_3)
+
 
         self.verticalLayout_2.addWidget(self.systemGroupBox)
 
@@ -202,8 +237,12 @@ class Ui_Settings(object):
         self.label_2.setText(QCoreApplication.translate("Settings", u"Enable Audio Notifications", None))
         self.enableAudioNotificationOn.setText(QCoreApplication.translate("Settings", u"On", None))
         self.enableAudioNotificationOff.setText(QCoreApplication.translate("Settings", u"Off", None))
-        self.label_3.setText(QCoreApplication.translate("Settings", u"Enable Desktop Notification", None))
+        self.label_3.setText(QCoreApplication.translate("Settings", u"Enable Desktop Notifications", None))
         self.enableDesktopNotificationOn.setText(QCoreApplication.translate("Settings", u"On", None))
         self.enableDesktopNotificationOff.setText(QCoreApplication.translate("Settings", u"Off", None))
+        self.slackLabel.setText(QCoreApplication.translate("Settings", u"Enable Slack Notifications", None))
+        self.enableSlackNotificationOn.setText(QCoreApplication.translate("Settings", u"On", None))
+        self.enableSlackNotificationOff.setText(QCoreApplication.translate("Settings", u"Off", None))
+        self.slackLineEdit.setPlaceholderText(QCoreApplication.translate("Settings", u"https://hooks.slack.com/services/...", None))
     # retranslateUi
 

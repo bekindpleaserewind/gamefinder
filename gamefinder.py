@@ -983,11 +983,16 @@ class SettingsDialog(QDialog, Ui_Settings):
         self.enableDesktopNotificationBg.addButton(self.enableDesktopNotificationOn)
         self.enableDesktopNotificationBg.addButton(self.enableDesktopNotificationOff)
 
+        self.enableSlackNotificationBg = QButtonGroup()
+        self.enableSlackNotificationBg.addButton(self.enableSlackNotificationOn)
+        self.enableSlackNotificationBg.addButton(self.enableSlackNotificationOff)
+
         self.buttonBox.accepted.connect(self.accept)
         self.automaticIntervalsBg.buttonClicked.connect(self.checkAutomaticIntervalsButton)
         self.searchOnStartupBg.buttonClicked.connect(self.checkSearchOnStartupButton)
         self.enableAudioNotificationBg.buttonClicked.connect(self.checkEnableAudioNotificationButton)
         self.enableDesktopNotificationBg.buttonClicked.connect(self.checkEnableDesktopNotificationButton)
+        self.enableSlackNotificationBg.buttonClicked.connect(self.checkEnableSlackNotificationButton)
 
         # Load Settings object and update in UI
         self.load()
@@ -1016,12 +1021,22 @@ class SettingsDialog(QDialog, Ui_Settings):
         else:
             self.settings.enableDesktopNotification = False
 
+    def checkEnableSlackNotificationButton(self, button):
+        if button.text() == "On" and button.isChecked():
+            self.settings.enableSlackNotification = True
+            self.settings.enableSlackNotificationWebhook = self.slackLineEdit.text()
+        else:
+            self.settings.enableSlackNotification = False
+            self.settings.enableSlackNotificationWebhook = False
+
     def load(self):
         self.settings = Settings()
         self.settings.signals.reload.connect(self.settings.load)
         self.settings.load()
 
         self.apiCallsPerDay.setText(str(self.settings.apiCallsPerDay))
+        if self.settings.enableSlackNotificationWebhook:
+            self.slackLineEdit.setText(str(self.settings.enableSlackNotificationWebhook))
 
         if self.settings.automaticInterval:
             self.enabledRadioButton.setChecked(True)
@@ -1055,6 +1070,13 @@ class SettingsDialog(QDialog, Ui_Settings):
             self.enableDesktopNotificationOn.setChecked(False)
             self.enableDesktopNotificationOff.setChecked(True)
 
+        if self.settings.enableSlackNotification:
+            self.enableSlackNotificationOn.setChecked(True)
+            self.enableSlackNotificationOff.setChecked(False)
+        else:
+            self.enableSlackNotificationOn.setChecked(False)
+            self.enableSlackNotificationOff.setChecked(True)
+
     def accept(self):
         self.settings.apiCallsPerDay = self.apiCallsPerDay.text()
 
@@ -1063,6 +1085,10 @@ class SettingsDialog(QDialog, Ui_Settings):
             self.settings.automaticInterval = True
         else:
             self.settings.automaticInterval = False
+        
+        if self.settings.enableSlackNotification:
+            self.settings.enableSlackNotificationWebhook = self.slackLineEdit.text()
+
         self.settings.save()
 
         super(SettingsDialog, self).accept()

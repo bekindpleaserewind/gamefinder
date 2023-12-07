@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>300</height>
+    <width>582</width>
+    <height>346</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -39,7 +39,7 @@
           </property>
           <property name="sizeHint" stdset="0">
            <size>
-            <width>120</width>
+            <width>180</width>
             <height>20</height>
            </size>
           </property>
@@ -191,7 +191,7 @@
       <item row="2" column="0">
        <widget class="QLabel" name="label_3">
         <property name="text">
-         <string>Enable Desktop Notification</string>
+         <string>Enable Desktop Notifications</string>
         </property>
        </widget>
       </item>
@@ -223,6 +223,61 @@
            </size>
           </property>
          </spacer>
+        </item>
+       </layout>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="slackLabel">
+        <property name="text">
+         <string>Enable Slack Notifications</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <layout class="QVBoxLayout" name="verticalLayout_3">
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_6">
+          <item>
+           <widget class="QRadioButton" name="enableSlackNotificationOn">
+            <property name="text">
+             <string>On</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="enableSlackNotificationOff">
+            <property name="text">
+             <string>Off</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer_6">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="slackLineEdit">
+          <property name="minimumSize">
+           <size>
+            <width>384</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="placeholderText">
+           <string>https://hooks.slack.com/services/...</string>
+          </property>
+         </widget>
         </item>
        </layout>
       </item>
