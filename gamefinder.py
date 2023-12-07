@@ -406,7 +406,7 @@ class Platform:
             'itemFilters': {},
         }
 
-        if category == 139973 and self.platforms[id] is not None:
+        if (category == 139973 or category == 182174) and self.platforms[id] is not None:
             config[id]['aspectFilters']['Platform'] = self.platforms[id]
         elif (category == 260000 or category == 139971) and self.models[id] is not None:
             config[id]['aspectFilters']['Model'] = self.models[id]
@@ -575,7 +575,7 @@ class PlatformsDialog(QDialog, Ui_Platforms):
                 logging.debug("No Category Selected")
                 return False
         
-            if category == 139973:
+            if category == 139973 or category == 182174:
                 platforms = self.getPlatforms()
                 if len(platforms) == 0:
                     logging.debug("No Platforms Selected")
@@ -602,7 +602,7 @@ class PlatformsDialog(QDialog, Ui_Platforms):
                     conditions.append(condition)
 
             result = Platform()
-            if category == 139973:
+            if category == 139973 or category == 182174:
                 result.addPlatform(search, category, locations, conditions, platform = platforms)
             else:
                 result.addPlatform(search, category, locations, conditions, model = models)
@@ -840,8 +840,7 @@ class PlatformsDialog(QDialog, Ui_Platforms):
             categoryId = self.category.currentData()[0]
             configId = self.category.currentData()[1]
 
-            if categoryId == 139973:
-                # Video Games
+            if categoryId == 139973 or categoryId == 182174:
                 #   aspectFilters:
                 #       Platform
                 self.models.hide()
@@ -857,7 +856,6 @@ class PlatformsDialog(QDialog, Ui_Platforms):
                     if len(item) > 0 and item is not None:
                         self.addPlatformCheckComboItem(item, item)
             elif categoryId == 260000 or categoryId == 139971:
-                # Video Game & Console Mixed Lots
                 #   aspectFilters:
                 #       Model
                 self.platforms.hide()
