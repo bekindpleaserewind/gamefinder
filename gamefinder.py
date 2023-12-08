@@ -46,6 +46,7 @@ from PySide6.QtWidgets import (
 from appinfo import Info
 from path import Pathinfo
 from signals import AppSignals
+from dialogs import Notice
 
 from businesslogic import (
     GameFinder, 
@@ -987,7 +988,6 @@ class SettingsDialog(QDialog, Ui_Settings):
         self.enableSlackNotificationBg.addButton(self.enableSlackNotificationOn)
         self.enableSlackNotificationBg.addButton(self.enableSlackNotificationOff)
 
-        self.buttonBox.accepted.connect(self.accept)
         self.automaticIntervalsBg.buttonClicked.connect(self.checkAutomaticIntervalsButton)
         self.searchOnStartupBg.buttonClicked.connect(self.checkSearchOnStartupButton)
         self.enableAudioNotificationBg.buttonClicked.connect(self.checkEnableAudioNotificationButton)
@@ -1078,6 +1078,13 @@ class SettingsDialog(QDialog, Ui_Settings):
             self.enableSlackNotificationOff.setChecked(True)
 
     def accept(self):
+        self.settings.enableSlackNotificationWebhook = self.slackLineEdit.text()
+        if self.settings.enableSlackNotification:
+            if not self.settings.enableSlackNotificationWebhook or len(self.settings.enableSlackNotificationWebhook) < 1:
+                notice = Notice('You must specify a Slack webhook endpoint when enabling Slack notifications.', parent = self)
+                notice.exec()
+                return False
+
         self.settings.apiCallsPerDay = self.apiCallsPerDay.text()
 
         self.settings.automaticIntervalTime = self.automaticIntervalMinutes.text()
@@ -1086,8 +1093,6 @@ class SettingsDialog(QDialog, Ui_Settings):
         else:
             self.settings.automaticInterval = False
         
-        if self.settings.enableSlackNotification:
-            self.settings.enableSlackNotificationWebhook = self.slackLineEdit.text()
 
         self.settings.save()
 
