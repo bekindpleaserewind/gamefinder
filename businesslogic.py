@@ -327,7 +327,7 @@ class Settings:
     searchOnStartup = False
     enableAudioNotification = True
     enableDesktopNotification = True
-    enableSlackNotification = True
+    enableSlackNotification = False
     enableSlackNotificationWebhook = False
 
     signals = SettingsSignals()
