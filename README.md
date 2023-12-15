@@ -17,10 +17,23 @@ Both a native Windows 11 executable is available at https://github.com/bekindple
 ### Binary (Windows 11)
 If you are on windows, just execute the Windows 11 executable and you should be good to go.
 
-### Source
-If you're running through source, you need to go through the following steps:
+### Source (Mac)
+Mac currently supports running from source using python3.  The only pre-reqs that I am aware of is the following:
 
-1. Install the pip modules by running ```pip install -r pip.txt```. I recommend doing this is a venv dedicated to Gamefinder.
+1. Install portaudio with brew: ```brew install portaudio```.
+1. Install python3 using ```brew install python3```.
+2. Install virtualenv with ```pip3 install virtualenv```.
+3. Create the virtual environment: ```virtualenv -p python3 </path/to/store/venv>```.
+4. Enter the virtual python3 environment: ```source /path/to/store/venv/bin/activate```.
+5. Install portaudio with ```brew install portaudio```.
+2. Install the pip modules by running ```pip install -r pip.txt```. I recommend doing this is a venv dedicated to Gamefinder.
+3. Ensure that the alerts/icons directories are in the same location as the source code (it is auto resolved in path.py).
+4. Execute ```python3 gamefinder.py```.
+
+### Source
+General source build instructions.
+
+1. Install the pip modules by running ```pip install -r pip.txt```. I recommend doing this is a python virtual environment dedicated to Gamefinder (see Mac source steps above).
 2. Ensure that the alerts/icons directories are in the same location as the source code (it is auto resolved in path.py).
 3. Execute ```python gamefinder.py```.
 
