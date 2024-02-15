@@ -68,9 +68,14 @@ from about import Ui_About
 OFFLINE = 0
 ONLINE = 1
 
-TYPE_CATEGORY = 0
-TYPE_ID = 1
-TYPE_ITEM = 2
+TYPE_CATEGORY = 1
+TYPE_CATEGORY_ID = 5 
+TYPE_ID = 10
+TYPE_CONDITION = 20
+TYPE_LOCATION = 30
+TYPE_PLATFORM = 40
+TYPE_MODEL = 50
+TYPE_SEARCH = 60
 
 
 def handler(signum, frame):
@@ -385,8 +390,9 @@ class Platform:
     def __init__(self):
         self.pathinfo = Pathinfo()
 
-    def addPlatform(self, search, category, locations, conditions, platform = None, model = None):
-        id = str(uuid.uuid4())
+    def addPlatform(self, search, category, locations, conditions, platform = None, model = None, id = False):
+        if not id:
+            id = str(uuid.uuid4())
         self.search[id] = search
         self.category[id] = category
         self.platforms[id] = platform
@@ -457,6 +463,8 @@ class PlatformsDialog(QDialog, Ui_Platforms):
         # Track how many checkboxes have been checked
         self.countLocations = 0
 
+        self.blockOnEdit = False
+
         # Setup UI customizations and defaults
         self.platforms.hide()
         self.platformsLabel.hide()
@@ -479,8 +487,108 @@ class PlatformsDialog(QDialog, Ui_Platforms):
 
         self.create.clicked.connect(self.createClicked)
         self.remove.clicked.connect(self.removeClicked)
-
         self.loadSaved()
+
+        self.root.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.root.customContextMenuRequested.connect(self.prepareContextMenu)
+
+    def prepareContextMenu(self, pos):
+        self.highlightClickedIdRow()
+        item = self.root.itemAt(pos)
+        editAction = QAction("Edit Platform", self)
+        editAction.triggered.connect(self.editPlatform)
+        menu = QMenu(self)
+        menu.addAction(editAction)
+        menu.exec(self.root.mapToGlobal(pos))
+
+    def editPlatform(self):
+        self.create.setText("Update")
+        self.create.clicked.disconnect(self.createClicked)
+        self.create.clicked.connect(self.updateClicked)
+
+        targets = self.getTargetsFromLoadedSaves(self.root)
+        c = {
+                TYPE_CATEGORY: False,
+                TYPE_MODEL: False,
+                TYPE_CONDITION: False,
+                TYPE_LOCATION: False,
+                TYPE_PLATFORM: False,
+                TYPE_SEARCH: False,
+                TYPE_ID: False,
+                TYPE_CATEGORY_ID: False,
+            }
+
+        for target in targets:
+            targetType = target.data(0, Qt.UserRole)
+            targetText = target.text(0)
+
+            if targetType == TYPE_MODEL:
+                c[TYPE_MODEL] = target.data(1, Qt.UserRole)
+            elif targetType == TYPE_CONDITION:
+                c[TYPE_CONDITION] = target.data(1, Qt.UserRole)
+            elif targetType == TYPE_LOCATION:
+                c[TYPE_LOCATION] = target.data(1, Qt.UserRole)
+            elif targetType == TYPE_PLATFORM:
+                c[TYPE_PLATFORM] = target.data(1, Qt.UserRole)
+            elif targetType == TYPE_SEARCH:
+                c[TYPE_SEARCH] = target.data(1, Qt.UserRole)
+            elif targetType == TYPE_CATEGORY_ID:
+                c[TYPE_CATEGORY] = self.lastUpdateConfigId = target.parent().text(0)
+                c[TYPE_CATEGORY_ID] = self.lastUpdateConfigId = target.text(0)
+                with open(self.pathinfo.aspectfilters, "r") as fd:
+                    af = yaml.load(fd, Loader=yaml.SafeLoader)
+                    for k in af.keys():
+                        if af[k]['name'] == c[TYPE_CATEGORY]:
+                            c[TYPE_ID] = k
+                            break
+
+        self.models.hide()
+        self.modelsLabel.hide()
+        self.platforms.hide()
+        self.platformsLabel.hide()
+
+        if c[TYPE_MODEL] is not False:
+            self.models.clear()
+            self.addModelCheckComboItem("Select Models", False)
+            models = self.saves.model(c[TYPE_ID], True)
+
+            for item in models:
+                if len(item) > 0 and item is not None:
+                        if item in c[TYPE_MODEL]:
+                            self.addModelCheckComboItem(item, item, True)
+                        else:
+                            self.addModelCheckComboItem(item, item)
+            self.models.show()
+            self.modelsLabel.show()
+        if c[TYPE_PLATFORM] is not False and c[TYPE_ID] is not False:
+            self.platforms.clear()
+            self.addPlatformCheckComboItem("Select Platforms", False)
+            platforms = self.saves.platform(c[TYPE_ID], True)
+
+            for item in platforms:
+                if len(item) > 0 and item is not None:
+                        if item in c[TYPE_PLATFORM]:
+                            self.addPlatformCheckComboItem(item, item, True)
+                        else:
+                            self.addPlatformCheckComboItem(item, item)
+
+            self.platforms.show()
+            self.platformsLabel.show()
+        if c[TYPE_CONDITION] is not False:
+            self.clearCheckedComboBoxItems(self.conditions)
+            self.checkComboBoxItem(self.conditions, c[TYPE_CONDITION])
+        if c[TYPE_LOCATION] is not False:
+            self.clearCheckedComboBoxItems(self.locations)
+            self.checkComboBoxItem(self.locations, c[TYPE_LOCATION])
+        if c[TYPE_CATEGORY] is not False:
+            self.blockOnEdit = True
+            self.selectComboBoxItem(self.category, c[TYPE_CATEGORY])
+            self.blockOnEdit = False
+        if c[TYPE_SEARCH] is not False:
+            self.search.clear()
+            self.search.setText(c[TYPE_SEARCH])
+            print("Set search to {} ".format(c[TYPE_SEARCH]))
+
 
     def loadSaved(self):
         if self.saves:
@@ -525,22 +633,28 @@ class PlatformsDialog(QDialog, Ui_Platforms):
                 roots[items[configId]['category']] = root
 
             id = QTreeWidgetItem([str(configId), ""])
-            id.setData(0, Qt.UserRole, TYPE_ID)
+            id.setData(0, Qt.UserRole, TYPE_CATEGORY_ID)
+            id.setData(1, Qt.UserRole, configId)
 
             search = QTreeWidgetItem(["Keywords", str(items[configId]['search'])], )
-            search.setData(0, Qt.UserRole, TYPE_ITEM)
+            search.setData(0, Qt.UserRole, TYPE_SEARCH)
+            search.setData(1, Qt.UserRole, items[configId]['search'])
             locations = QTreeWidgetItem(["Locations", str(items[configId]['locations'])])
-            locations.setData(0, Qt.UserRole, TYPE_ITEM)
+            locations.setData(0, Qt.UserRole, TYPE_LOCATION)
+            locations.setData(1, Qt.UserRole, items[configId]['locations'])
             conditions = QTreeWidgetItem(["Conditions", str(items[configId]['conditions'])])
-            conditions.setData(0, Qt.UserRole, TYPE_ITEM)
+            conditions.setData(0, Qt.UserRole, TYPE_CONDITION)
+            conditions.setData(1, Qt.UserRole, items[configId]['conditions'])
 
             for aspectFilterType in self.saves.aspectFilterTypes(configId):
                 if aspectFilterType == "Platform":
                     platforms = QTreeWidgetItem(["Platforms", str(items[configId]['platforms'])])
-                    platforms.setData(0, Qt.UserRole, TYPE_ITEM)
+                    platforms.setData(0, Qt.UserRole, TYPE_PLATFORM)
+                    platforms.setData(1, Qt.UserRole, items[configId]['platforms'])
                 elif aspectFilterType == "Model":
                     models = QTreeWidgetItem(["Models", str(items[configId]['models'])])
-                    models.setData(0, Qt.UserRole, TYPE_ITEM)
+                    models.setData(0, Qt.UserRole, TYPE_MODEL)
+                    models.setData(1, Qt.UserRole, items[configId]['models'])
 
 
             root.addChild(id)
@@ -561,7 +675,7 @@ class PlatformsDialog(QDialog, Ui_Platforms):
         self.root.resizeColumnToContents(1)
         self.root.itemClicked.connect(self.highlightClickedIdRow)
     
-    def highlightClickedIdRow(self, item, column):
+    def highlightClickedIdRow(self, *args, **kwargs):
         targets = self.getTargetsFromLoadedSaves(self.root)
         for target in targets:
             target.setSelected(True)
@@ -619,6 +733,64 @@ class PlatformsDialog(QDialog, Ui_Platforms):
             self.resetUi()
             self.loadSaved()
 
+    def updateClicked(self):
+        search = self.search.text()
+
+        currentData = self.category.currentData()
+        if currentData:
+            category = currentData[0]
+            if not category:
+                logging.debug("No Category Selected")
+                return False
+        
+            if category == 139973 or category == 182174 or category == 54968:
+                platforms = self.getPlatforms()
+                if len(platforms) == 0:
+                    logging.debug("No Platforms Selected")
+                    return False
+            if category == 260000 or category == 139971:
+                models = self.getModels()
+                if len(models) == 0:
+                    logging.debug("No Models Selected")
+                    return False
+            if category == 182175:
+                platforms = self.getPlatforms()
+                models = self.getModels()
+                if len(platforms) == 0 or len(models) == 0:
+                    logging.debug("No Platforms or Models Selected")
+                    return False
+
+            locations = self.getLocations()
+            if len(locations) == 0:
+                logging.debug("No locations selected")
+                return False
+
+            conditions = []
+            tmpConditions = self.getConditions()
+            for condition in tmpConditions:
+                # Remove all conditions if Any condition is specified
+                if condition == -1:
+                    conditions = []
+                    break
+                else:
+                    conditions.append(condition)
+
+            result = Platform()
+            if category == 139973 or category == 182174 or category == 54968:
+                result.addPlatform(search, category, locations, conditions, platform = platforms, id = self.lastUpdateConfigId)
+            elif category == 260000 or category == 139971:
+                result.addPlatform(search, category, locations, conditions, model = models, id = self.lastUpdateConfigId)
+            elif category == 182175:
+                result.addPlatform(search, category, locations, conditions, platform = platforms, model = models, id = self.lastUpdateConfigId)
+
+            self.resetUi()
+            self.loadSaved()
+
+            self.create.setText("Create")
+            self.create.clicked.disconnect(self.updateClicked)
+            self.create.clicked.connect(self.createClicked)
+
+
     def resetUi(self):
         self.platforms.clear()
         self.platforms.hide()
@@ -644,7 +816,7 @@ class PlatformsDialog(QDialog, Ui_Platforms):
         targets = self.getTargetsFromLoadedSaves(self.root)
         for target in targets:
             targetType = target.data(0, Qt.UserRole)
-            if targetType == TYPE_ID:
+            if targetType == TYPE_CATEGORY_ID:
                 configId = target.text(0)
                 with open(self.pathinfo.platforms, "r") as fd:
                     config = yaml.load(fd, Loader=yaml.SafeLoader)
@@ -653,7 +825,7 @@ class PlatformsDialog(QDialog, Ui_Platforms):
                     del config[configId]
                     yaml.dump(config, fd)
 
-                # Only need to delete TYPE_ID
+                # Only need to delete TYPE_CATEGORY_ID
                 self.resetUi()
                 self.loadSaved()
                 return True
@@ -668,12 +840,12 @@ class PlatformsDialog(QDialog, Ui_Platforms):
 
             if itemType == TYPE_CATEGORY:
                 item.setSelected(False)
-            elif itemType == TYPE_ID:
+            elif itemType == TYPE_CATEGORY_ID:
                 targets.append(item)
                 for n in range(0, item.childCount()):
                         child = item.child(n)
                         targets.append(child)
-            elif itemType == TYPE_ITEM:
+            elif itemType in (TYPE_MODEL, TYPE_MODEL, TYPE_SEARCH, TYPE_PLATFORM, TYPE_CONDITION, TYPE_LOCATION):
                 parent = item.parent()
                 targets.append(parent)
 
@@ -720,7 +892,7 @@ class PlatformsDialog(QDialog, Ui_Platforms):
             self.clickTracker = False
 
     def platformsItemChanged(self, item):
-        self.uncheckItem(item)
+        self.uncheckItem(item, True)
 
     def modelsItemChanged(self, item):
         self.uncheckItem(item)
@@ -728,11 +900,12 @@ class PlatformsDialog(QDialog, Ui_Platforms):
     def conditionsItemChanged(self, item):
         self.uncheckItem(item)
 
-    def uncheckItem(self, item):
+    def uncheckItem(self, item, debug = False):
         checked = item.checkState()
         if checked == Qt.Checked:
             # Do not support checking first item (it is informational only)
             if item.index().row() == 0:
+                print("Unchecking item for platforms")
                 item.setCheckState(Qt.Unchecked)
     
     def addLocationCheckComboItem(self, item, value, checked = False):
@@ -745,18 +918,24 @@ class PlatformsDialog(QDialog, Ui_Platforms):
             item.setCheckState(Qt.Unchecked)
         self.locationComboItemCount += 1
 
-    def addPlatformCheckComboItem(self, item, value):
+    def addPlatformCheckComboItem(self, item, value, setChecked = False):
         self.platforms.addItem(item, userData=value)
         item = self.platforms.model().item(self.platforms.count()-1, 0)
         item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
-        item.setCheckState(Qt.Unchecked)
+        if setChecked:
+            item.setCheckState(Qt.Checked)
+        else:
+            item.setCheckState(Qt.Unchecked)
         self.platformComboItemCount += 1
 
-    def addModelCheckComboItem(self, item, value):
+    def addModelCheckComboItem(self, item, value, setChecked = False):
         self.models.addItem(item, userData=value)
         item = self.models.model().item(self.models.count()-1, 0)
         item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
-        item.setCheckState(Qt.Unchecked)
+        if setChecked:
+            item.setCheckState(Qt.Checked)
+        else:
+            item.setCheckState(Qt.Unchecked)
         self.modelComboItemCount += 1
 
     def addConditionsCheckComboItem(self, item, value, setChecked = False):
@@ -797,6 +976,35 @@ class PlatformsDialog(QDialog, Ui_Platforms):
         for country in iso3166.countries:
             self.addLocationCheckComboItem(country.name, country.alpha2)
     
+    def selectComboBoxItem(self, combobox, text):
+        total = combobox.count()
+        print("[selectComboBoxItem] count == {}".format(total))
+        for index in range(0, total):
+            print("[selectComboBoxItem] {} == {}".format(text, combobox.itemText(index)))
+            if combobox.itemText(index) == text:
+                combobox.setCurrentIndex(index)
+
+    def clearCheckedComboBoxItems(self, combobox):
+        total = combobox.count()
+        for index in range(0, total):
+            item = combobox.model().item(index, 0)
+            item.setCheckState(Qt.Unchecked)
+
+    def checkComboBoxItem(self, combobox, data, foo = False):
+        total = combobox.count()
+        for d in data:
+            for index in range(0, total):
+                if foo:
+                    print("[checkComboBoxItem] {} == {}".format(len(d), len(combobox.itemText(index))))
+
+                if combobox.itemText(index) == d:
+                    print("MATCHED {} == {}".format(d, combobox.itemText(index)))
+                    item = combobox.model().item(index, 0)
+                    print("INDEX: {}".format(item.index().row()))
+                    print("BOOM: {}".format(item.text()))
+                    item.setCheckState(Qt.Checked)
+                    print("STATE: {}".format(item.checkState()))
+
     def loadCategory(self, loadUi = True):
         self.categoryToAspectFilters = {}
 
@@ -844,6 +1052,10 @@ class PlatformsDialog(QDialog, Ui_Platforms):
             self.category.currentIndexChanged.connect(self.updateCategory)
         
     def updateCategory(self, index):
+        if self.blockOnEdit:
+            print("Blocked updateCategory")
+            return False
+
         data = self.category.itemData(index, role = Qt.UserRole)
         if data and data is not None:
             categoryId = self.category.currentData()[0]
