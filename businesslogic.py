@@ -88,11 +88,13 @@ class GameFinder(FindingConnection, QObject):
                 j = json.loads(response.json())
 
                 if j['ack'] != 'Success':
+                    self.signals.error.emit(j['errorMessage']['error']['message'])
                     logging.error("Search failed")
                     logging.error("{}".format(str(response.json())))
                     continue
 
                 if int(j['searchResult']['_count']) < 1:
+                    print("No search results found for category '{}'".format(platform_config[platform].get('categoryId')))
                     logging.info("No search results found for category '{}'".format(platform_config[platform].get('categoryId')))
                     continue
 
@@ -182,6 +184,10 @@ class Worker(QRunnable):
     def handleGameFinderData(self, d):
         self.signals.data.emit(d)
 
+    def handleGameFinderError(self, e):
+        print("[handleGameFinderError] emit error")
+        self.signals.error.emit(e)
+
     @Slot()
     def run(self):
         self.running = True
@@ -189,6 +195,7 @@ class Worker(QRunnable):
             gf = GameFinder()
             gf.signals.notify.connect(self.handleGameFinderNotify)
             gf.signals.data.connect(self.handleGameFinderData)
+            gf.signals.error.connect(self.handleGameFinderError)
 
             while self.running:
                 gf.find()

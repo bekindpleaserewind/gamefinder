@@ -40,6 +40,9 @@ from PySide6.QtWidgets import (
     QTableWidgetItem, 
     QTreeWidgetItem, 
     QWidget, 
+    QVBoxLayout,
+    QDialogButtonBox,
+    QAbstractScrollArea,
 )
 
 # Local code
@@ -93,6 +96,7 @@ class App:
         self.worker = Worker()
         self.worker.signals.notify.connect(self.handleSignalWorkerNotify)
         self.worker.signals.data.connect(self.handleSignalWorkerData)
+        self.worker.signals.error.connect(self.handleSignalWorkerError)
         self.threadpool.start(self.worker)
 
     def handleSignalWorkerNotify(self, t):
@@ -100,6 +104,10 @@ class App:
 
     def handleSignalWorkerData(self, d):
         self.signals.data.emit(d)
+
+    def handleSignalWorkerError(self, e):
+        print("[handleSignalWorkerError] emit error")
+        self.signals.error.emit(e)
 
     def stop(self):
         if self.worker is not None and self.worker.isRunning():
@@ -1310,6 +1318,27 @@ class SettingsDialog(QDialog, Ui_Settings):
 
         super(SettingsDialog, self).accept()
 
+class ErrorDialog(QDialog):
+    def __init__(self, parent = None):
+        super().__init__(parent)
+
+        self.setWindowTitle("Error")
+
+        QBtn = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+
+        self.buttonBox = QDialogButtonBox(QBtn)
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+
+        self.layout = QVBoxLayout()
+        self.message = QLabel("Something happened?")
+        self.layout.addWidget(self.message)
+        self.layout.addWidget(self.buttonBox)
+        self.setLayout(self.layout)
+    
+    def setError(self, e):
+        self.message.setText(e)
+
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
@@ -1329,6 +1358,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.gamefinder = App(app)
         self.gamefinder.signals.notify.connect(self.sendNotification)
         self.gamefinder.signals.data.connect(self.updateData)
+        self.gamefinder.signals.error.connect(self.displayError)
 
         # Configure menubar
         self.actionQuit.triggered.connect(self.shutdown)
@@ -1414,6 +1444,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.loadTableState()
         self.main.addWidget(self.tableWidget)
 
+        # Setup console
+        scrollbar = self.consoleScroll.verticalScrollBar()
+        scrollbar.rangeChanged.connect(self.scrollConsole)
+
+        #self.consoleLabel = QLabel()
+        #self.consoleLabel.setAlignment(Qt.AlignmentFlag.AlignBottom)
+        #self.consoleLabel.setMaximumSize(QSize(16777215, 64))
+
+        #self.consoleScroll = QAbstractScrollArea()
+        #self.consoleScroll.setMaximumSize(QSize(16777215, 64))
+        #self.consoleScroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        #self.consoleScroll.setViewport(self.consoleLabel)
+
+        #self.consoleLayout.addWidget(self.consoleScroll)
+
         # Check if search on startup is enabled
         if self.settings.searchOnStartup:
             self.start()
@@ -1425,6 +1470,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def displayAuthenticationSetup(self, *args, **kwargs):
         wizard = SetupWizard(self, True)
         wizard.show()
+
+    def scrollConsole(self, min, max):
+        self.consoleScroll.verticalScrollBar().setValue(max)
+
+    def displayError(self, e):
+        self.consoleLabel.setText("{}<p>{}</p>".format(self.consoleLabel.text(), e,))
 
     def updateData(self, d):
         if len(d) > 0:

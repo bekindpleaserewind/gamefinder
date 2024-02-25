@@ -16,8 +16,9 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QIcon, QImage, QKeySequence, QLinearGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
-from PySide6.QtWidgets import (QApplication, QMainWindow, QMenu, QMenuBar,
-    QSizePolicy, QStatusBar, QToolBar, QVBoxLayout,
+from PySide6.QtWidgets import (QApplication, QGroupBox, QLabel, QMainWindow,
+    QMenu, QMenuBar, QScrollArea, QSizePolicy,
+    QSplitter, QStatusBar, QToolBar, QVBoxLayout,
     QWidget)
 
 class Ui_MainWindow(object):
@@ -48,10 +49,54 @@ class Ui_MainWindow(object):
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayout_2 = QVBoxLayout(self.centralwidget)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.main = QVBoxLayout()
+        self.splitter = QSplitter(self.centralwidget)
+        self.splitter.setObjectName(u"splitter")
+        self.splitter.setMaximumSize(QSize(16777215, 16777215))
+        self.splitter.setOrientation(Qt.Vertical)
+        self.verticalLayoutWidget = QWidget(self.splitter)
+        self.verticalLayoutWidget.setObjectName(u"verticalLayoutWidget")
+        self.main = QVBoxLayout(self.verticalLayoutWidget)
         self.main.setObjectName(u"main")
+        self.main.setContentsMargins(0, 0, 0, 0)
+        self.splitter.addWidget(self.verticalLayoutWidget)
+        self.consoleGroupBox = QGroupBox(self.splitter)
+        self.consoleGroupBox.setObjectName(u"consoleGroupBox")
+        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.consoleGroupBox.sizePolicy().hasHeightForWidth())
+        self.consoleGroupBox.setSizePolicy(sizePolicy)
+        self.consoleGroupBox.setMinimumSize(QSize(0, 0))
+        self.consoleGroupBox.setMaximumSize(QSize(16777215, 128))
+        self.verticalLayout = QVBoxLayout(self.consoleGroupBox)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.consoleLayout = QVBoxLayout()
+        self.consoleLayout.setObjectName(u"consoleLayout")
+        self.consoleScroll = QScrollArea(self.consoleGroupBox)
+        self.consoleScroll.setObjectName(u"consoleScroll")
+        self.consoleScroll.setWidgetResizable(True)
+        self.scrollAreaWidgetContents_2 = QWidget()
+        self.scrollAreaWidgetContents_2.setObjectName(u"scrollAreaWidgetContents_2")
+        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 982, 88))
+        self.verticalLayout_3 = QVBoxLayout(self.scrollAreaWidgetContents_2)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.consoleLabel = QLabel(self.scrollAreaWidgetContents_2)
+        self.consoleLabel.setObjectName(u"consoleLabel")
+        self.consoleLabel.setAlignment(Qt.AlignBottom|Qt.AlignLeading|Qt.AlignLeft)
+        self.consoleLabel.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
-        self.verticalLayout_2.addLayout(self.main)
+        self.verticalLayout_3.addWidget(self.consoleLabel)
+
+        self.consoleScroll.setWidget(self.scrollAreaWidgetContents_2)
+
+        self.consoleLayout.addWidget(self.consoleScroll)
+
+
+        self.verticalLayout.addLayout(self.consoleLayout)
+
+        self.splitter.addWidget(self.consoleGroupBox)
+
+        self.verticalLayout_2.addWidget(self.splitter)
 
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
@@ -70,9 +115,6 @@ class Ui_MainWindow(object):
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
-        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.statusbar.sizePolicy().hasHeightForWidth())
         self.statusbar.setSizePolicy(sizePolicy)
         self.statusbar.setLayoutDirection(Qt.LeftToRight)
@@ -113,6 +155,8 @@ class Ui_MainWindow(object):
         self.actionAuthentication.setText(QCoreApplication.translate("MainWindow", u"Authentication", None))
         self.actionPlatforms.setText(QCoreApplication.translate("MainWindow", u"Platforms", None))
         self.actionToolbar.setText(QCoreApplication.translate("MainWindow", u"Toolbar", None))
+        self.consoleGroupBox.setTitle(QCoreApplication.translate("MainWindow", u"Console", None))
+        self.consoleLabel.setText("")
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menuHelp.setTitle(QCoreApplication.translate("MainWindow", u"Help", None))
         self.menuSearch.setTitle(QCoreApplication.translate("MainWindow", u"Search", None))
