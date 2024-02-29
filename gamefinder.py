@@ -5,9 +5,11 @@ import sys
 import signal
 import yaml
 import uuid
+import time
 import logging
-
 import iso3166
+
+from datetime import datetime
 
 # PySide6
 from PySide6.QtGui import (
@@ -48,8 +50,9 @@ from PySide6.QtWidgets import (
 # Local code
 from appinfo import Info
 from path import Pathinfo
-from signals import AppSignals
 from dialogs import Notice
+from console import Console
+from signals import AppSignals, ConsoleSignals
 
 from businesslogic import (
     GameFinder, 
@@ -88,16 +91,23 @@ class App:
     def __init__(self, qtApp):
         self.app = qtApp
         self.signals = AppSignals()
+        self.consoleSignals = ConsoleSignals()
         self.worker = None
         self.threadpool = None
 
     def run(self):
         self.threadpool = QThreadPool()
+
         self.worker = Worker()
         self.worker.signals.notify.connect(self.handleSignalWorkerNotify)
         self.worker.signals.data.connect(self.handleSignalWorkerData)
         self.worker.signals.error.connect(self.handleSignalWorkerError)
+        self.worker.consoleSignals.message.connect(self.handleConsoleSignal)
+
         self.threadpool.start(self.worker)
+
+    def handleConsoleSignal(self, m):
+        self.consoleSignals.message.emit(m)
 
     def handleSignalWorkerNotify(self, t):
         self.signals.notify.emit(t)
@@ -106,7 +116,6 @@ class App:
         self.signals.data.emit(d)
 
     def handleSignalWorkerError(self, e):
-        print("[handleSignalWorkerError] emit error")
         self.signals.error.emit(e)
 
     def stop(self):
@@ -453,6 +462,7 @@ class PlatformsDialog(QDialog, Ui_Platforms):
         self.categoryToItemFilters = {}
         self.categoryToAspectFilters = {}
         self.setupUi(self)
+        self.console = Console()
 
         parent.stop()
 
@@ -595,8 +605,6 @@ class PlatformsDialog(QDialog, Ui_Platforms):
         if c[TYPE_SEARCH] is not False:
             self.search.clear()
             self.search.setText(c[TYPE_SEARCH])
-            print("Set search to {} ".format(c[TYPE_SEARCH]))
-
 
     def loadSaved(self):
         if self.saves:
@@ -913,7 +921,6 @@ class PlatformsDialog(QDialog, Ui_Platforms):
         if checked == Qt.Checked:
             # Do not support checking first item (it is informational only)
             if item.index().row() == 0:
-                print("Unchecking item for platforms")
                 item.setCheckState(Qt.Unchecked)
     
     def addLocationCheckComboItem(self, item, value, checked = False):
@@ -986,9 +993,7 @@ class PlatformsDialog(QDialog, Ui_Platforms):
     
     def selectComboBoxItem(self, combobox, text):
         total = combobox.count()
-        print("[selectComboBoxItem] count == {}".format(total))
         for index in range(0, total):
-            print("[selectComboBoxItem] {} == {}".format(text, combobox.itemText(index)))
             if combobox.itemText(index) == text:
                 combobox.setCurrentIndex(index)
 
@@ -998,20 +1003,13 @@ class PlatformsDialog(QDialog, Ui_Platforms):
             item = combobox.model().item(index, 0)
             item.setCheckState(Qt.Unchecked)
 
-    def checkComboBoxItem(self, combobox, data, foo = False):
+    def checkComboBoxItem(self, combobox, data):
         total = combobox.count()
         for d in data:
             for index in range(0, total):
-                if foo:
-                    print("[checkComboBoxItem] {} == {}".format(len(d), len(combobox.itemText(index))))
-
                 if combobox.itemText(index) == d:
-                    print("MATCHED {} == {}".format(d, combobox.itemText(index)))
                     item = combobox.model().item(index, 0)
-                    print("INDEX: {}".format(item.index().row()))
-                    print("BOOM: {}".format(item.text()))
                     item.setCheckState(Qt.Checked)
-                    print("STATE: {}".format(item.checkState()))
 
     def loadCategory(self, loadUi = True):
         self.categoryToAspectFilters = {}
@@ -1061,7 +1059,6 @@ class PlatformsDialog(QDialog, Ui_Platforms):
         
     def updateCategory(self, index):
         if self.blockOnEdit:
-            print("Blocked updateCategory")
             return False
 
         data = self.category.itemData(index, role = Qt.UserRole)
@@ -1358,7 +1355,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.gamefinder = App(app)
         self.gamefinder.signals.notify.connect(self.sendNotification)
         self.gamefinder.signals.data.connect(self.updateData)
-        self.gamefinder.signals.error.connect(self.displayError)
+        self.gamefinder.consoleSignals.message.connect(self.displayConsoleMessage)
 
         # Configure menubar
         self.actionQuit.triggered.connect(self.shutdown)
@@ -1448,21 +1445,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         scrollbar = self.consoleScroll.verticalScrollBar()
         scrollbar.rangeChanged.connect(self.scrollConsole)
 
-        #self.consoleLabel = QLabel()
-        #self.consoleLabel.setAlignment(Qt.AlignmentFlag.AlignBottom)
-        #self.consoleLabel.setMaximumSize(QSize(16777215, 64))
-
-        #self.consoleScroll = QAbstractScrollArea()
-        #self.consoleScroll.setMaximumSize(QSize(16777215, 64))
-        #self.consoleScroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
-        #self.consoleScroll.setViewport(self.consoleLabel)
-
-        #self.consoleLayout.addWidget(self.consoleScroll)
-
         # Check if search on startup is enabled
         if self.settings.searchOnStartup:
             self.start()
      
+        # Handles correct formatting of console messages
+        self.console = Console()
+        self.firstMessage = True
+
     def about(self):
         about = AboutDialog(self)
         about.show()
@@ -1474,8 +1464,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def scrollConsole(self, min, max):
         self.consoleScroll.verticalScrollBar().setValue(max)
 
-    def displayError(self, e):
-        self.consoleLabel.setText("{}<p>{}</p>".format(self.consoleLabel.text(), e,))
+    def displayConsoleMessage(self, e):
+        self.consoleLabel.setText(self.console.toString(e))
 
     def updateData(self, d):
         if len(d) > 0:

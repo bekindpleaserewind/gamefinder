@@ -17,3 +17,6 @@ class GameFinderSignals(QObject):
 
 class SettingsSignals(QObject):
     reload = Signal(bool)
+
+class ConsoleSignals(QObject):
+    message = Signal(tuple)

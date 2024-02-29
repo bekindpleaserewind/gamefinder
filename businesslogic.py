@@ -3,7 +3,6 @@ import sys
 import time
 import json
 import yaml
-import logging
 import requests
 import decimal
 import babel.numbers
@@ -12,7 +11,8 @@ from PySide6.QtCore import QObject, Slot, QRunnable
 
 from path import Pathinfo
 from appinfo import Info
-from signals import GameFinderSignals, WorkerSignals, SettingsSignals
+from signals import GameFinderSignals, WorkerSignals, SettingsSignals, ConsoleSignals
+from console import Console
 
 from ebaysdk.finding import Connection as FindingConnection
 from ebaysdk.exception import ConnectionError
@@ -39,6 +39,9 @@ class GameFinder(FindingConnection, QObject):
         # Initialize pygame audio mixer
         mixer.init()
 
+        # Setup console logging
+        self.console = Console()
+
         super(GameFinder, self).__init__(config_file = self.pathinfo.ebay)
 
     def find(self):
@@ -63,8 +66,8 @@ class GameFinder(FindingConnection, QObject):
                 if check != None:
                     api_request['categoryId'] = check
                 else:
-                    logging.critical("categoryId is required")
-                    sys.exit(0)
+                    self.console.crit("internal error: categoryId is required")
+                    continue
 
                 check = platform_config[platform].get('keywords')
                 if check != None:
@@ -84,18 +87,19 @@ class GameFinder(FindingConnection, QObject):
                         api_request['aspectFilter'].append({'aspectName': key, 'aspectValueName': value})
 
                 # send API request
+                self.console.info("searching platform {}".format(platform))
+
                 response = self.execute('findItemsAdvanced', api_request)
                 j = json.loads(response.json())
 
                 if j['ack'] != 'Success':
-                    self.signals.error.emit(j['errorMessage']['error']['message'])
-                    logging.error("Search failed")
-                    logging.error("{}".format(str(response.json())))
+                    self.console.warn("searching platform {} failed".format(platform))
+                    self.console.warn(j['errorMessage']['error']['message'])
+                    self.console.debug(str(response.json()))
                     continue
 
                 if int(j['searchResult']['_count']) < 1:
-                    print("No search results found for category '{}'".format(platform_config[platform].get('categoryId')))
-                    logging.info("No search results found for category '{}'".format(platform_config[platform].get('categoryId')))
+                    self.console.info("no search results found for category '{}' in platform {}".format(platform_config[platform].get('categoryId'), platform))
                     continue
 
                 latest_auction_stamp = j['searchResult']['item'][0]['listingInfo']['startTime']
@@ -136,6 +140,8 @@ class GameFinder(FindingConnection, QObject):
                         items.append(item['title'])
 
                 itemCount = len(items)
+                if itemCount > 0:
+                    self.console.info("found results for platorm {}".format(platform))
 
                 # Audio Notification
                 if self.settings.enableAudioNotification and itemCount > 0:
@@ -160,19 +166,19 @@ class GameFinder(FindingConnection, QObject):
                     try:
                         slack.post(notification)
                     except Exception as e:
-                        logging.warn("{}".format(str(e)))
+                        self.console.warn("slack notification error: {}".format(str(e)))
 
                 self.signals.data.emit(datas)
 
         except ConnectionError as e:
-            logging.error(e)
-            logging.error("{}".format(str(e)))
+            self.console.err("connection error: {}".format(str(e)))
 
 class Worker(QRunnable):
     def __init__(self):
         super(Worker, self).__init__()
         self.running = False
         self.signals = WorkerSignals()
+        self.consoleSignals = ConsoleSignals()
         self.pathinfo = Pathinfo()
         self.settings = Settings()
         self.settings.signals.reload.connect(self.settings.load)
@@ -185,8 +191,10 @@ class Worker(QRunnable):
         self.signals.data.emit(d)
 
     def handleGameFinderError(self, e):
-        print("[handleGameFinderError] emit error")
         self.signals.error.emit(e)
+
+    def handleConsoleMessage(self, e):
+        self.consoleSignals.message.emit(e)
 
     @Slot()
     def run(self):
@@ -196,6 +204,7 @@ class Worker(QRunnable):
             gf.signals.notify.connect(self.handleGameFinderNotify)
             gf.signals.data.connect(self.handleGameFinderData)
             gf.signals.error.connect(self.handleGameFinderError)
+            gf.console.signals.message.connect(self.handleConsoleMessage)
 
             while self.running:
                 gf.find()
